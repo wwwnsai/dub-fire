@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Layout from "./layout";
+import Layout from "@/component/Layout";
 import StatusCard from "@/component/StatusCard";
 import SensorStatus from "@/component/SensorStatus";
 import WebCamPhoto from "../photo/web.png";

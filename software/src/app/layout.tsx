@@ -16,12 +16,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Sen:wght@400..800&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <main className="min-h-screen bg-gray-50 text-gray-800 font-sans">
+        <main className="min-h-screen">
           {children}
         </main>
       </body>
