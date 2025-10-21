@@ -6,28 +6,24 @@
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
-  font-style: normal;
 }
 
-.sen-mudium {
+.sen-medium {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
   font-weight: 600;
-  font-style: medium;
 }
 
 .sen-semibold {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
   font-weight: 700;
-  font-size: 20px;
 }
 
 .sen-bold {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
   font-weight: 800;
-  font-size: 1.5rem;
 }
 
 :root {
