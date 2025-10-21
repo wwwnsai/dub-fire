@@ -13,7 +13,7 @@ const StatusCard: FC<StatusCardProps> = ({ device, status }) => {
       <div className="gap-2 flex flex-col">
         <p className="text-gray-600 text-sm sen-regular">Device: <span className="text-sm sen-medium">{device}</span></p>
         {/* <p className={`sen-semibold text-2xl ${status === "safe" ? "text-green-600" : "text-red-600"}`}> */}
-        <p className={`sen-semibold text-2xl text-black`}>
+        <p className={`sen-semibold text-2xl text-[#0A0F23]`}>
           {status}
         </p>
       </div>
