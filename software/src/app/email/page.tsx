@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../lib/supabaseClient";
 import Layout from "@/component/Layout";
 
 export default function EmailPage() {
