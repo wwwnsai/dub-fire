@@ -11,19 +11,19 @@
 .sen-medium {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .sen-semibold {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sen-bold {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 :root {
