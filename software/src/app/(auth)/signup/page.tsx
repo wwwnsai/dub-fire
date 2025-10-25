@@ -40,6 +40,12 @@ export default function SignupPage() {
     else router.push("/login");
   };
 
+  const handleOAuthSignup = async (provider: string) => {
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: provider as any });
+    if (oauthError) setError(oauthError.message);
+    else router.push("/signup");
+  };
+
   return (
     <div className="h-full">
       <p className="text-text-primary sen-medium text-lg mb-4">Create your account</p>
@@ -93,31 +99,19 @@ export default function SignupPage() {
           <div className="flex justify-center items-center w-full mt-4 mb-8 gap-4">
             <button
               className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => {
-                const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: "google" });
-                if (oauthError) setError(oauthError.message);
-                else router.push("/signup");
-              }}
+              onClick={async () => handleOAuthSignup("google")}
             >
               <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
             </button>
             <button
               className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => {
-                const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: "facebook" });
-                if (oauthError) setError(oauthError.message);
-                else router.push("/signup");
-              }}
+              onClick={async () => handleOAuthSignup("facebook")}
             >
               <Image src={facebookLogo} alt="Facebook Logo" width={20} height={20} />
             </button>
             <button
               className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => {
-                const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: "apple" });
-                if (oauthError) setError(oauthError.message);
-                else router.push("/signup");
-              }}
+              onClick={async () => handleOAuthSignup("apple")}
             >
               <Image src={appleLogo} alt="Apple Logo" width={20} height={20} />
             </button>
