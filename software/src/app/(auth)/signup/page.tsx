@@ -98,12 +98,12 @@ export default function SignupPage() {
           </p>
           <div className="flex justify-center items-center w-full mt-4 mb-8 gap-4">
             <button
-              className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
+              className="w-full bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
               onClick={async () => handleOAuthSignup("google")}
             >
               <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
             </button>
-            <button
+            {/* <button
               className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
               onClick={async () => handleOAuthSignup("facebook")}
             >
@@ -114,7 +114,7 @@ export default function SignupPage() {
               onClick={async () => handleOAuthSignup("apple")}
             >
               <Image src={appleLogo} alt="Apple Logo" width={20} height={20} />
-            </button>
+            </button> */}
           </div>
           <div className="flex items-end mt-8">
             <p className="mt-auto text-text-secondary sen-regular text-sm">
