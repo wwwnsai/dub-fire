@@ -8,7 +8,7 @@ interface FireLocation {
   lat: number;
   lng: number;
   name?: string;
-  severity?: "low" | "medium" | "high" | "critical";
+  severity?: "non-fire" | "high" ;
 }
 
 interface LocationMapProps {
@@ -75,8 +75,8 @@ export default function LocationMap({
     // Adjust map bounds to show all markers
     if (fireLocations.length > 0) {
       const bounds = L.latLngBounds([
-        [latitude, longitude],
-        ...fireLocations.map((fire) => [fire.lat, fire.lng]),
+        L.latLng(latitude, longitude),
+        ...fireLocations.map((fire) => L.latLng(fire.lat, fire.lng)),
       ]);
       map.fitBounds(bounds, { padding: [50, 50] });
     }

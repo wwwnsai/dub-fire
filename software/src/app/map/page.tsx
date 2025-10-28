@@ -19,7 +19,7 @@ interface FireLocation {
   lat: number;
   lng: number;
   name?: string;
-  severity?: "low" | "medium" | "high" | "critical";
+  severity?: "non-fire" | "high" ;
 }
 
 export default function MapPage() {
