@@ -23,7 +23,7 @@ module.exports = {
         },
         text: {
           light: '#000000',
-          promary: '#0A0F23',
+          primary: '#0A0F23',
           secondary: '#5a5a5a',
           dark: '#ffffff',
         },

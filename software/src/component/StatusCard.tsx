@@ -9,7 +9,7 @@ interface StatusCardProps {
 
 const StatusCard: FC<StatusCardProps> = ({ device, status }) => {
   return (
-    <div className="bg-white rounded-xl h-36 py-6 px-8 flex items-center justify-between shadow-md">
+    <div className="bg-white rounded-xl h-36 py-6 px-8 flex items-center justify-between">
       <div className="gap-2 flex flex-col">
         <p className="text-gray-600 text-sm sen-regular">
           Device: <span className="text-sm sen-medium">{device}</span>

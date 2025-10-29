@@ -202,14 +202,14 @@ export default function MapPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="mt-2">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Your Location</h1>
+        <div className="flex justify-between mb-2">
+          <h1 className="sen-regular text-xl text-text-secondary">Your Location</h1>
           <div className="flex space-x-2">
             <button
               onClick={simulateSeverityChange}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+              className="px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
             >
               🔥 Test Fire Alert
             </button>

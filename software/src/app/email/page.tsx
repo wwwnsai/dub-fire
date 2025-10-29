@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Layout from "@/component/Layout";
+import { eventBus } from "@/lib/eventBus";
 
 export default function EmailPage() {
   const [email, setEmail] = useState("");
@@ -47,6 +48,11 @@ export default function EmailPage() {
         setMessage("Successfully registered for fire alerts!");
         setIsSuccess(true);
         setEmail(""); // Clear the form
+
+        eventBus.emit("email:registered", {
+          email,
+          time: new Date().toISOString(),
+        });
       }
     } catch (error) {
       setMessage("An error occurred. Please try again.");

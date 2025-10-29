@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AlertTriangle, Send, Users, Clock } from "lucide-react";
 import { NotificationStats } from "@/lib/types";
 import { API_ENDPOINTS } from "@/lib/constants";
+import { eventBus } from "@/lib/eventBus";
 
 export default function FireAlertTest() {
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,14 @@ export default function FireAlertTest() {
       if (response.ok) {
         setMessage("Fire alert sent successfully! Check console for details.");
         fetchStats(); // Refresh stats
+
+        // ✅ Emit an event locally
+        eventBus.emit("fire:alert", {
+          status: "fire",
+          location: "Dubai Fire Station",
+          severity: "high",
+          time: new Date().toISOString(),
+        });
       } else {
         setMessage(`Error: ${data.error}`);
       }

@@ -1,18 +1,24 @@
-type EventCallback = (payload: any) => void
+type EventCallback<T = any> = (payload: T) => void;
 
 class EventBus {
-  private events: Record<string, EventCallback[]> = {}
+  private listeners: Record<string, EventCallback[]> = {};
 
-  on(event: string, callback: EventCallback) {
-    if (!this.events[event]) this.events[event] = []
-    this.events[event].push(callback)
+  on<T = any>(event: string, callback: EventCallback<T>) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(callback);
   }
 
-  emit(event: string, payload?: any) {
-    if (this.events[event]) {
-      this.events[event].forEach((callback) => callback(payload))
-    }
+  off<T = any>(event: string, callback: EventCallback<T>) {
+    this.listeners[event] = (this.listeners[event] || []).filter(
+      (cb) => cb !== callback
+    );
+  }
+
+  emit<T = any>(event: string, payload: T) {
+    (this.listeners[event] || []).forEach((cb) => cb(payload));
   }
 }
 
-export const eventBus = new EventBus()
+export const eventBus = new EventBus();

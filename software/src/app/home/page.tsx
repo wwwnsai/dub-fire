@@ -16,7 +16,7 @@ export default function Home() {
     <Layout>
       <div className="mt-2">
         <div className="mb-2">
-          <h1 className="sen-regular text-xl" style={{ color: "#5a5a5a" }}>
+          <h1 className="sen-regular text-xl text-text-secondary">
             Current Status
           </h1>
         </div>
