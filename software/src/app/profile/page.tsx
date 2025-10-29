@@ -9,15 +9,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { Profile } from "@/lib/types/users";
 
-// 1. Define a type for your profile data
-type Profile = {
-  id: string;
-  username: string;
-  email: string;
-  avatar_url: string;
-  email_noti: boolean;
-};
 
 export default function Page() {
     const router = useRouter();
@@ -119,14 +112,15 @@ export default function Page() {
       <div className="flex flex-col items-center justify-center mt-8">
         <div className="w-28 h-28 relative rounded-full overflow-hidden">
           <Image
-            src={pfp}
+            src={profile?.avatar_url || pfp}
             alt="User Profile Picture"
             fill
             className="object-cover"
+            sizes="7rem"
           />
         </div>
         <button
-          className="flex justify-center items-center bg-[#FAE4CF] w-20 h-6 mt-6 rounded-full hover:cursor-pointer"
+          className="flex justify-center items-center bg-secondary-beige w-20 h-6 mt-6 rounded-full hover:cursor-pointer"
           onClick={() => alert('Change profile picture functionality coming soon!')}
         >
           <p className="sen-regular text-secondary-light text-sm">change</p>

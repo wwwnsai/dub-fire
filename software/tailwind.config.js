@@ -16,6 +16,7 @@ module.exports = {
         },
         secondary: {
           light: '#BB2234',
+          beige: '#FAE4CF'
         },
         background: {
           light: '#FAF7F8',
