@@ -2,15 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   sendFireAlertNotification,
   getNotificationStats,
+  sendStatusChangeNotification,
 } from "@/lib/emailService";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate the request body
-    const { status, location, severity = "high", coordinates } = body;
+    // Two modes supported:
+    // 1) Legacy mode: { status: "fire", severity?, location?, coordinates? }
+    // 2) Transition mode: { fromStatus: "non-fire"|"fire", toStatus: "non-fire"|"fire", location?, coordinates? }
 
+    // Transition mode takes precedence if provided
+    if (
+      typeof body.fromStatus === "string" &&
+      typeof body.toStatus === "string"
+    ) {
+      const { fromStatus, toStatus, location, coordinates } = body as {
+        fromStatus: "fire" | "non-fire";
+        toStatus: "fire" | "non-fire";
+        location?: string;
+        coordinates?: { lat: number; lng: number };
+      };
+
+      const success = await sendStatusChangeNotification({
+        fromStatus,
+        toStatus,
+        location: location || "Unknown Location",
+        coordinates,
+      });
+
+      return success
+        ? NextResponse.json({ message: "Status change notifications sent" })
+        : NextResponse.json(
+            { error: "Failed to send notifications" },
+            { status: 500 }
+          );
+    }
+
+    // Legacy: only send when status === "fire"
+    const { status, location, severity = "high", coordinates } = body;
     if (status !== "fire") {
       return NextResponse.json(
         { error: "Only fire status triggers notifications" },

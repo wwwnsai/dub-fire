@@ -8,7 +8,7 @@ interface FireLocation {
   lat: number;
   lng: number;
   name?: string;
-  severity?: "non-fire" | "high" ;
+  severity?: "non-fire" | "high";
 }
 
 interface LocationMapProps {
@@ -53,32 +53,43 @@ export default function LocationMap({
       .addTo(map)
       .bindPopup("📍 Your Current Location");
 
-    // Add fire detection markers
+    // Add fire detection markers (only for high severity)
     fireLocations.forEach((fire) => {
-      const severityText = fire.severity?.toUpperCase() || "UNKNOWN";
-      L.marker([fire.lat, fire.lng], { icon: fireIcon }).addTo(map).bindPopup(`
-          <div style="text-align: center;">
-            <h3 style="color: #ff4444; font-weight: bold; margin: 0 0 5px 0;">🔥 Fire Detected!</h3>
-            <p style="margin: 5px 0;"><strong>Severity:</strong> ${severityText}</p>
-            ${
-              fire.name
-                ? `<p style="margin: 5px 0;"><strong>Location:</strong> ${fire.name}</p>`
-                : ""
-            }
-            <p style="margin: 5px 0;"><strong>Coordinates:</strong><br/>${
-              fire.lat
-            }, ${fire.lng}</p>
-          </div>
-        `);
+      // Email context details when fire detected shown
+      if (fire.severity === "high") {
+        const severityText = fire.severity?.toUpperCase() || "UNKNOWN";
+        L.marker([fire.lat, fire.lng], { icon: fireIcon }).addTo(map)
+          .bindPopup(`
+            <div style="text-align: center;">
+              <h3 style="color: #ff4444; font-weight: bold; margin: 0 0 5px 0;">🔥 Fire Detected!</h3>
+              <p style="margin: 5px 0;"><strong>Severity:</strong> ${severityText}</p>
+              ${
+                fire.name
+                  ? `<p style="margin: 5px 0;"><strong>Location:</strong> ${fire.name}</p>`
+                  : ""
+              }
+              <p style="margin: 5px 0;"><strong>Coordinates:</strong><br/>${
+                fire.lat
+              }, ${fire.lng}</p>
+            </div>
+          `);
+      }
     });
 
-    // Adjust map bounds to show all markers
-    if (fireLocations.length > 0) {
+    // Adjust map bounds to show all markers (only high severity locations)
+    const highSeverityLocations = fireLocations.filter(
+      (fire) => fire.severity === "high"
+    );
+    if (highSeverityLocations.length > 0) {
       const bounds = L.latLngBounds([
         L.latLng(latitude, longitude),
-        ...fireLocations.map((fire) => L.latLng(fire.lat, fire.lng)),
+        ...highSeverityLocations.map((fire) => L.latLng(fire.lat, fire.lng)),
       ]);
       map.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+      // If no fire locations, use a zoom level similar to fire detection
+      // This keeps the map at a good detail level
+      map.setView([latitude, longitude], 16);
     }
 
     // Cleanup

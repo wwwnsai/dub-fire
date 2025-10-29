@@ -1,9 +1,10 @@
 "use client";
 
 import Layout from "@/component/Layout";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MapPin, Navigation, AlertCircle, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useFireStatus } from "@/lib/fireStatusContext";
 
 const MapWithNoSSR = dynamic(() => import("@/component/LocationMap"), {
   ssr: false,
@@ -19,7 +20,15 @@ interface FireLocation {
   lat: number;
   lng: number;
   name?: string;
-  severity?: "non-fire" | "high" ;
+  severity?: "non-fire" | "high";
+}
+
+interface SeverityChange {
+  locationId: string;
+  fromStatus: "fire" | "non-fire";
+  toStatus: "fire" | "non-fire";
+  coordinates: { lat: number; lng: number };
+  location?: string;
 }
 
 export default function MapPage() {
@@ -28,20 +37,96 @@ export default function MapPage() {
   const [error, setError] = useState<string | null>(null);
   const [mapUrl, setMapUrl] = useState("");
 
-  // Example fire locations (you can fetch these from your fire detection system)
-  const [fireLocations] = useState<FireLocation[]>([
-    // Fire detected at lat 13.726849, lng 100.767144
-    {
-      lat: 13.726849,
-      lng: 100.767144,
-      name: "Fire Detected",
-      severity: "high",
-    },
-  ]);
+  // Use shared fire status context
+  const { fireLocations, setFireLocations } = useFireStatus();
+
+  // Track previous severity states for change detection
+  const previousSeveritiesRef = useRef<Record<string, "fire" | "non-fire">>({});
 
   useEffect(() => {
     getCurrentLocation();
   }, []);
+
+  // Function to convert severity to fire status
+  const severityToFireStatus = (
+    severity?: "non-fire" | "high"
+  ): "fire" | "non-fire" => {
+    return severity === "high" ? "fire" : "non-fire";
+  };
+
+  // Function to generate location ID
+  const generateLocationId = (lat: number, lng: number): string => {
+    return `${lat.toFixed(6)}_${lng.toFixed(6)}`;
+  };
+
+  // Function to send email alert for severity changes
+  const sendSeverityChangeAlert = async (change: SeverityChange) => {
+    try {
+      const response = await fetch("/api/fire-alert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fromStatus: change.fromStatus,
+          toStatus: change.toStatus,
+          location: change.location,
+          coordinates: change.coordinates,
+        }),
+      });
+
+      if (response.ok) {
+        console.log(
+          `✅ Email alert sent for ${change.fromStatus} → ${change.toStatus}`
+        );
+      } else {
+        console.error("❌ Failed to send email alert:", await response.text());
+      }
+    } catch (error) {
+      console.error("❌ Error sending email alert:", error);
+    }
+  };
+
+  // Effect to monitor severity changes
+  useEffect(() => {
+    if (fireLocations.length === 0) return;
+
+    const changes: SeverityChange[] = [];
+
+    fireLocations.forEach((location) => {
+      const locationId = generateLocationId(location.lat, location.lng);
+      const currentStatus = severityToFireStatus(location.severity);
+      const previousStatus = previousSeveritiesRef.current[locationId];
+
+      // If this is a new location or status has changed
+      if (previousStatus !== undefined && previousStatus !== currentStatus) {
+        changes.push({
+          locationId,
+          fromStatus: previousStatus,
+          toStatus: currentStatus,
+          coordinates: { lat: location.lat, lng: location.lng },
+          location: location.name,
+        });
+      }
+    });
+
+    // Send email alerts for all changes
+    changes.forEach((change) => {
+      sendSeverityChangeAlert(change);
+    });
+
+    // Update previous severities after processing changes
+    if (changes.length > 0) {
+      console.log(`🔥 Detected ${changes.length} severity changes:`, changes);
+    }
+
+    // Always update the ref with current severities
+    fireLocations.forEach((location) => {
+      const locationId = generateLocationId(location.lat, location.lng);
+      const currentStatus = severityToFireStatus(location.severity);
+      previousSeveritiesRef.current[locationId] = currentStatus;
+    });
+  }, [fireLocations]);
 
   const getCurrentLocation = () => {
     setIsLoading(true);
@@ -97,19 +182,38 @@ export default function MapPage() {
     getCurrentLocation();
   };
 
+  // Function to simulate severity changes (for testing)
+  const simulateSeverityChange = () => {
+    setFireLocations((prev: FireLocation[]) =>
+      prev.map((location: FireLocation) => ({
+        ...location,
+        severity: location.severity === "high" ? "non-fire" : "high",
+        name: location.severity === "high" ? "Fire Cleared" : "Fire Detected",
+      }))
+    );
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Your Location</h1>
-          <button
-            onClick={refreshLocation}
-            className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-            disabled={isLoading}
-          >
-            <Navigation className="w-5 h-5" />
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={simulateSeverityChange}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+            >
+              🔥 Test Fire Alert
+            </button>
+            <button
+              onClick={refreshLocation}
+              className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+              disabled={isLoading}
+            >
+              <Navigation className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -200,12 +304,38 @@ export default function MapPage() {
             {/* Fire Alert Status */}
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center space-x-2 mb-2">
-                <AlertCircle className="w-5 h-5 text-green-500" />
+                <AlertCircle
+                  className={`w-5 h-5 ${
+                    fireLocations[0]?.severity === "high"
+                      ? "text-red-500"
+                      : "text-green-500"
+                  }`}
+                />
                 <h3 className="font-semibold text-gray-900">Safety Status</h3>
               </div>
-              <p className="text-sm text-gray-600">
-                ✅ No fire detected in your current area
+              <p
+                className={`text-sm ${
+                  fireLocations[0]?.severity === "high"
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`}
+              >
+                {fireLocations[0]?.severity === "high"
+                  ? "🔥 Fire detected in your area"
+                  : "✅ No fire detected in your current area"}
               </p>
+              {fireLocations[0]?.severity === "high" && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                  <p className="text-xs text-red-700">
+                    <strong>Location:</strong>{" "}
+                    {fireLocations[0]?.name || "Unknown"}
+                    <br />
+                    <strong>Coordinates:</strong>{" "}
+                    {fireLocations[0]?.lat.toFixed(6)},{" "}
+                    {fireLocations[0]?.lng.toFixed(6)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

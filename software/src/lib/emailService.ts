@@ -1,8 +1,51 @@
 import { supabase } from "./supabaseClient";
 // import resend library
 import { Resend } from "resend";
+import sgMail from "@sendgrid/mail";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+const DEFAULT_FROM =
+  process.env.EMAIL_FROM || "Fire Alert System <alerts@yourdomain.com>";
+
+async function deliverEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  const { to, subject, html } = params;
+  // Prefer SendGrid if configured, fallback to Resend
+  if (process.env.SENDGRID_API_KEY) {
+    await sgMail.send({
+      to,
+      from: DEFAULT_FROM,
+      subject,
+      html,
+    });
+    return;
+  }
+
+  // Resend
+  if (resend) {
+    await resend.emails.send({
+      from: DEFAULT_FROM,
+      to: [to],
+      subject,
+      html,
+    });
+    return;
+  }
+
+  throw new Error(
+    "No email provider configured. Set SENDGRID_API_KEY or RESEND_API_KEY."
+  );
+}
 
 export interface EmailSubscription {
   id: string;
@@ -22,6 +65,8 @@ export interface FireAlertData {
     lng: number;
   };
 }
+
+export type FireStatus = "fire" | "non-fire";
 
 /**
  * Get all active email subscriptions from Supabase
@@ -69,9 +114,8 @@ export async function sendFireAlertNotification(
     // Send emails using Resend
     const emailPromises = subscribers.map(async (subscriber) => {
       try {
-        await resend.emails.send({
-          from: "Fire Alert System <alerts@yourdomain.com>", // Replace with your verified domain
-          to: [subscriber.email],
+        await deliverEmail({
+          to: subscriber.email,
           subject: `🔥 FIRE ALERT - ${
             alertData.location || "Emergency Location"
           }`,
@@ -132,6 +176,73 @@ export async function sendFireAlertNotification(
 }
 
 /**
+ * Send status change notification (non-fire -> fire OR fire -> non-fire)
+ */
+export async function sendStatusChangeNotification(params: {
+  fromStatus: FireStatus;
+  toStatus: FireStatus;
+  coordinates?: { lat: number; lng: number };
+  location?: string;
+}): Promise<boolean> {
+  try {
+    const { fromStatus, toStatus, coordinates, location } = params;
+
+    // Only alert on transitions between fire and non-fire
+    const isTransitionBetweenStates =
+      (fromStatus === "non-fire" && toStatus === "fire") ||
+      (fromStatus === "fire" && toStatus === "non-fire");
+
+    if (!isTransitionBetweenStates) return true;
+
+    const isDetection = toStatus === "fire";
+    const subject = isDetection ? "🔥 Fire detected" : "✅ Fire cleared";
+    const headline = isDetection ? "🔥 Fire detected" : "✅ Fire cleared";
+
+    const subscribers = await getActiveSubscriptions();
+    if (subscribers.length === 0) {
+      console.log("No active subscribers found");
+      return true;
+    }
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+        <h1 style="margin:0 0 12px;">${headline}</h1>
+        ${
+          location
+            ? `<p style="margin:4px 0;"><strong>Location:</strong> ${location}</p>`
+            : ""
+        }
+        ${
+          coordinates
+            ? `<p style=\"margin:4px 0;\"><strong>Coordinates:</strong> ${coordinates.lat}, ${coordinates.lng}</p>`
+            : ""
+        }
+        <p style="margin:12px 0 0; color:#666; font-size:12px;">Automated alert from the Fire Detection System.</p>
+      </div>
+    `;
+
+    await Promise.all(
+      subscribers.map(async (subscriber) => {
+        try {
+          await deliverEmail({ to: subscriber.email, subject, html });
+        } catch (err) {
+          console.error(
+            `Failed to send status email to ${subscriber.email}:`,
+            err
+          );
+        }
+      })
+    );
+
+    await updateNotificationTracking(subscribers.map((s) => s.id));
+    return true;
+  } catch (error) {
+    console.error("Error sending status change notifications:", error);
+    return false;
+  }
+}
+
+/**
  * Update notification tracking for subscribers
  */
 async function updateNotificationTracking(
@@ -142,7 +253,6 @@ async function updateNotificationTracking(
       .from("email_subscriptions")
       .update({
         last_notified_at: new Date().toISOString(),
-        notification_count: supabase.raw("notification_count + 1"),
       })
       .in("id", subscriberIds);
 
