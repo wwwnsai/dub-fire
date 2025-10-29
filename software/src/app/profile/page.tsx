@@ -19,37 +19,59 @@ export default function Page() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-            console.log("Auth Event:", event);
-            if (session) {
-                console.log("Session:", session);
-                const currentUser = session.user;
-                setUser(currentUser);
+      // This function will run immediately
+      const fetchData = async () => {
+        // 1. Actively get the current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-                const { data: profileData, error: profileError } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("id", currentUser.id)
-                    .maybeSingle();
-
-                if (profileError) {
-                    console.error("Profile Error:", profileError.message);
-                } else {
-                    console.log("Profile Data:", profileData);
-                    setProfile(profileData);
-                }
-            } else {
-                setUser(null);
-                setProfile(null);
-            }
-            setLoading(false);
+        if (sessionError) {
+          console.error("Error getting session:", sessionError.message);
+          setLoading(false);
+          return;
         }
-        );
 
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
+        if (session) {
+          // 2. We have a session, fetch the user and profile
+          const currentUser = session.user;
+          setUser(currentUser);
+
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", currentUser.id)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error("Profile Error:", profileError.message);
+          } else {
+            setProfile(profileData);
+          }
+          setLoading(false); // 3. Set loading false *after* data is fetched
+        } else {
+          // 4. No session, redirect to login
+          setLoading(false);
+          router.push("/login");
+        }
+      };
+
+      fetchData();
+
+      // 5. Still listen for future changes (like logging out)
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (event === "SIGNED_OUT") {
+            // If the user logs out (e.g., in another tab), redirect
+            setProfile(null);
+            setUser(null);
+            router.push("/login");
+          }
+        }
+      );
+
+      // 6. Cleanup the listener
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
     }, [router]);
 
     type InfoItem = { title: string; description: string };
