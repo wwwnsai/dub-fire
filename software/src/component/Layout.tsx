@@ -13,9 +13,9 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-background-light">
       {/* 🔹 Top Navbar */}
-      <header className="flex fixed top-0 left-0 right-0 bg-transparent z-50">
+      <header className="flex fixed top-0 left-0 right-0 bg-background-light z-50">
         <button 
-          className="w-1/2 flex justify-start items-center px-4 py-8"
+          className="w-1/2 flex justify-start items-center px-4 pt-6 pb-4"
           onClick={() => window.location.href = '/profile'}
         >
           <div className="w-8 h-8 relative rounded-full overflow-hidden">
@@ -28,7 +28,7 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
           <span className="ml-2 text-md sen-regular text-text-primary">John Doe</span>
         </button>
-        <div className="w-1/2 flex justify-end items-center px-6 py-8">
+        <div className="w-1/2 flex justify-end items-center px-6 pt-6 pb-4">
           <NotificationBadge
             count={2}
             notifications={[

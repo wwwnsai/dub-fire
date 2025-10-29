@@ -29,12 +29,6 @@ export default function SignupPage() {
       return;
     }
 
-    const { data } = await supabase.auth.signInWithPassword({ email, password });
-    if (data.user) {
-      setError("An account with this email already exists");
-      return;
-    }
-
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) setError(error.message);
     else router.push("/login");
@@ -43,7 +37,6 @@ export default function SignupPage() {
   const handleOAuthSignup = async (provider: string) => {
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: provider as any });
     if (oauthError) setError(oauthError.message);
-    else router.push("/signup");
   };
 
   return (
@@ -103,18 +96,6 @@ export default function SignupPage() {
             >
               <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
             </button>
-            {/* <button
-              className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => handleOAuthSignup("facebook")}
-            >
-              <Image src={facebookLogo} alt="Facebook Logo" width={20} height={20} />
-            </button>
-            <button
-              className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => handleOAuthSignup("apple")}
-            >
-              <Image src={appleLogo} alt="Apple Logo" width={20} height={20} />
-            </button> */}
           </div>
           <div className="flex items-end mt-8">
             <p className="mt-auto text-text-secondary sen-regular text-sm">

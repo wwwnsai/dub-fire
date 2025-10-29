@@ -16,19 +16,28 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
     else router.push("/home"); // redirect after login
   };
 
   const handleOAuthLogin = async (provider: string) => {
+    setLoading(true);
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: provider as any });
-    if (oauthError) setError(oauthError.message);
+    if (oauthError) {
+      setError(oauthError.message);
+      setLoading(false);
+    }
     else router.push("/login");
   };
 
