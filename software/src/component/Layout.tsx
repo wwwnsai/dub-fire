@@ -70,7 +70,11 @@ const Layout = ({ children }: LayoutProps) => {
               className="object-cover"
             />
           </div>)}
-          <span className={`${profile ? 'sen-regular ml-2 text-text-primary' : 'sen-medium text-primary-light bg-secondary-beige rounded-lg px-4 py-1'} text-md `}>{profile?.username || "Login"}</span>
+          <span 
+            className={`${profile ? 'sen-regular ml-2 text-text-primary' : 'sen-medium text-primary-light bg-secondary-beige rounded-lg px-4 py-1'} text-md `}
+          >
+            {profile?.username || "Log In"}
+          </span>
         </button>
         <div className="w-1/4 flex justify-end items-center pr-6 pt-6 pb-4">
           <NotificationBadge

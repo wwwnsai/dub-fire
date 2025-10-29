@@ -207,18 +207,18 @@ export default function MapPage() {
         <div className="flex justify-between mb-2">
           <h1 className="sen-regular text-xl text-text-secondary">Your Location</h1>
           <div className="flex space-x-2">
-            <button
+            {/* <button
               onClick={simulateSeverityChange}
               className="px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
             >
               🔥 Test Fire Alert
-            </button>
+            </button> */}
             <button
               onClick={refreshLocation}
-              className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+              className="p-2 bg-primary-light text-white rounded-full hover:bg-orange-600 transition-colors"
               disabled={isLoading}
             >
-              <Navigation className="w-5 h-5" />
+              <Navigation className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -227,7 +227,7 @@ export default function MapPage() {
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
             <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-            <p className="text-gray-600">Getting your location...</p>
+            <p className="sen-regular text-text-secondary">Getting your location...</p>
           </div>
         )}
 
@@ -236,7 +236,7 @@ export default function MapPage() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
             <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
             <div className="flex-1">
-              <p className="text-red-800 font-medium">Location Error</p>
+              <p className="text-red-800 sen-medium">Location Error</p>
               <p className="text-red-600 text-sm mt-1">{error}</p>
               
               {/* Manual Location Input */}
@@ -316,16 +316,16 @@ export default function MapPage() {
         {userLocation && (
           <div className="space-y-4">
             {/* Location Card */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-3 bg-orange-100 rounded-full">
                   <MapPin className="w-6 h-6 text-orange-500" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-900">
+                  <h2 className="sen-semibold text-text-secondary text-md">
                     Current Position
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="sen-regualr text-text-secondary text-sm">
                     Updated: {formatTimestamp(userLocation.timestamp)}
                   </p>
                 </div>
@@ -333,14 +333,14 @@ export default function MapPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Latitude</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="sen-regular text-text-secondary text-xs mb-1">Latitude</p>
+                  <p className="sen-semibold text-text-secondary text-lg">
                     {userLocation.lat.toFixed(6)}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Longitude</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="sen-regular text-text-secondary text-xs mb-1">Longitude</p>
+                  <p className="sen-semibold text-text-secondary text-lg">
                     {userLocation.lng.toFixed(6)}
                   </p>
                 </div>
@@ -348,7 +348,7 @@ export default function MapPage() {
             </div>
 
             {/* Map Preview */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-lg overflow-hidden">
               <div className="aspect-video bg-gray-200 relative">
                 {userLocation && (
                   <MapWithNoSSR
@@ -359,7 +359,7 @@ export default function MapPage() {
                 )}
               </div>
               <div className="p-4">
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="sen-regular text-text-secondary text-sm mb-2">
                   📍 You are here - {formatTimestamp(userLocation.timestamp)}
                 </p>
                 {mapUrl && (
@@ -367,7 +367,7 @@ export default function MapPage() {
                     href={mapUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 text-orange-500 hover:text-orange-600 font-medium"
+                    className="inline-flex items-center space-x-2 text-primary-light hover:text-orange-600 sen-medium"
                   >
                     <span>Open in Google Maps</span>
                     <Navigation className="w-4 h-4" />
@@ -377,7 +377,7 @@ export default function MapPage() {
             </div>
 
             {/* Fire Alert Status */}
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <AlertCircle
                   className={`w-5 h-5 ${
@@ -386,13 +386,13 @@ export default function MapPage() {
                       : "text-green-500"
                   }`}
                 />
-                <h3 className="font-semibold text-gray-900">Safety Status</h3>
+                <h3 className="sen-semibold text-text-secondary">Safety Status</h3>
               </div>
               <p
-                className={`text-sm ${
+                className={`sen-regular text-sm ${
                   fireLocations[0]?.severity === "high"
-                    ? "text-red-600"
-                    : "text-gray-600"
+                    ? "text-secondary-light"
+                    : "text-text-secondary"
                 }`}
               >
                 {fireLocations[0]?.severity === "high"
@@ -416,7 +416,7 @@ export default function MapPage() {
         )}
 
         {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-medium text-blue-900 mb-2">
             📍 About Location Tracking
           </h3>
@@ -441,7 +441,7 @@ export default function MapPage() {
               <li>• Use the manual input option</li>
             </ul>
           </div>
-        </div>
+        </div> */}
       </div>
     </Layout>
   );
