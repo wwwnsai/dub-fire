@@ -1,1 +1,6 @@
-Hardware schematic of the dub_fire system
+List
+- ESP 32
+- ESP 32 CAM
+-
+-
+-
