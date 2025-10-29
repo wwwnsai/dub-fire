@@ -28,17 +28,22 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     }
-    else router.push("/home"); // redirect after login
+    else router.push("/home");
   };
 
   const handleOAuthLogin = async (provider: string) => {
     setLoading(true);
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: provider as any });
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: provider as any,
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+      },
+    });
+
     if (oauthError) {
       setError(oauthError.message);
       setLoading(false);
     }
-    else router.push("/login");
   };
 
   return (
@@ -62,9 +67,10 @@ export default function LoginPage() {
             type="submit"
             className="bg-primary-light text-white text-md sen-bold rounded py-4 hover:bg-secondary-light transition"
           >
-            Log In
+            {loading ? "Logging in..." : "Log In"}
           </button>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {!error && <div className="h-5"></div>} 
+          {error && <p className="text-red-500 text-sm h-5">{error}</p>}
         </form>
         <div className="flex flex-col items-center fixed left-0 right-0 bottom-16 z-30 mx-8">
           <p className="text-text-secondary sen-regular text-sm">
@@ -74,6 +80,7 @@ export default function LoginPage() {
             <button
               className="w-full bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
               onClick={async () => handleOAuthLogin("google")}
+              disabled={loading}
             >
               <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
             </button>
