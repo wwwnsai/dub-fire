@@ -43,10 +43,9 @@ export default function Home() {
             Live Camera
           </h1>
         </div>
-        {/* <LiveCamera src={WebCamPhoto.src} /> */}
         <Image
           src={WebCamPhoto}
-          alt="status icon"
+          alt="Live camera feed"
           width={640}
           height={640}
           className="rounded-lg shadow"

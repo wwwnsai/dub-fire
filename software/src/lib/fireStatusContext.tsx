@@ -1,18 +1,23 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
-
-interface FireLocation {
-  lat: number;
-  lng: number;
-  name?: string;
-  severity?: "non-fire" | "high";
-}
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
+import { FireLocation, SafetyStatus } from "./types";
+import { hasActiveFire } from "./utils";
 
 interface FireStatusContextType {
   fireLocations: FireLocation[];
   setFireLocations: React.Dispatch<React.SetStateAction<FireLocation[]>>;
-  getCurrentFireStatus: () => "safe" | "alert";
+  getCurrentFireStatus: () => SafetyStatus;
+  addFireLocation: (location: FireLocation) => void;
+  updateFireLocation: (id: string, updates: Partial<FireLocation>) => void;
+  removeFireLocation: (id: string) => void;
+  clearAllFireLocations: () => void;
 }
 
 const FireStatusContext = createContext<FireStatusContextType | undefined>(
@@ -29,22 +34,52 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
     },
   ]);
 
-  const getCurrentFireStatus = (): "safe" | "alert" => {
-    // Check if any location has high severity (fire detected)
-    const hasFire = fireLocations.some(
-      (location) => location.severity === "high"
+  const getCurrentFireStatus = useCallback((): SafetyStatus => {
+    return hasActiveFire(fireLocations) ? "alert" : "safe";
+  }, [fireLocations]);
+
+  const addFireLocation = useCallback((location: FireLocation) => {
+    setFireLocations((prev) => [...prev, location]);
+  }, []);
+
+  const updateFireLocation = useCallback(
+    (id: string, updates: Partial<FireLocation>) => {
+      setFireLocations((prev) =>
+        prev.map((location) =>
+          `${location.lat.toFixed(6)}_${location.lng.toFixed(6)}` === id
+            ? { ...location, ...updates }
+            : location
+        )
+      );
+    },
+    []
+  );
+
+  const removeFireLocation = useCallback((id: string) => {
+    setFireLocations((prev) =>
+      prev.filter(
+        (location) =>
+          `${location.lat.toFixed(6)}_${location.lng.toFixed(6)}` !== id
+      )
     );
-    return hasFire ? "alert" : "safe";
+  }, []);
+
+  const clearAllFireLocations = useCallback(() => {
+    setFireLocations([]);
+  }, []);
+
+  const value: FireStatusContextType = {
+    fireLocations,
+    setFireLocations,
+    getCurrentFireStatus,
+    addFireLocation,
+    updateFireLocation,
+    removeFireLocation,
+    clearAllFireLocations,
   };
 
   return (
-    <FireStatusContext.Provider
-      value={{
-        fireLocations,
-        setFireLocations,
-        getCurrentFireStatus,
-      }}
-    >
+    <FireStatusContext.Provider value={value}>
       {children}
     </FireStatusContext.Provider>
   );

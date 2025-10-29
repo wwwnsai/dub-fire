@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { AlertTriangle, Send, Users, Clock } from "lucide-react";
-
-interface NotificationStats {
-  totalSubscribers: number;
-  activeSubscribers: number;
-  lastNotificationSent?: string;
-}
+import { NotificationStats } from "@/lib/types";
+import { API_ENDPOINTS } from "@/lib/constants";
 
 export default function FireAlertTest() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +15,7 @@ export default function FireAlertTest() {
     setMessage("");
 
     try {
-      const response = await fetch("/api/fire-alert", {
+      const response = await fetch(API_ENDPOINTS.FIRE_ALERT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,7 +49,7 @@ export default function FireAlertTest() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/fire-alert");
+      const response = await fetch(API_ENDPOINTS.FIRE_ALERT);
       const data = await response.json();
       setStats(data);
     } catch (error) {

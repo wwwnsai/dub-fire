@@ -3,13 +3,8 @@
 import { useEffect } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-interface FireLocation {
-  lat: number;
-  lng: number;
-  name?: string;
-  severity?: "non-fire" | "high";
-}
+import { FireLocation } from "@/lib/types";
+import { MAP_CONFIG } from "@/lib/constants";
 
 interface LocationMapProps {
   latitude: number;
@@ -24,7 +19,10 @@ export default function LocationMap({
 }: LocationMapProps) {
   useEffect(() => {
     // Initialize map
-    const map = L.map("map").setView([latitude, longitude], 10);
+    const map = L.map("map").setView(
+      [latitude, longitude],
+      MAP_CONFIG.DEFAULT_ZOOM
+    );
 
     // Add OpenStreetMap tile layer
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -34,7 +32,7 @@ export default function LocationMap({
 
     // Create custom icon for user location (pin icon)
     const userIcon = L.icon({
-      iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", // Pin icon
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
       iconSize: [30, 30],
       iconAnchor: [15, 30],
       popupAnchor: [0, -30],
@@ -55,7 +53,6 @@ export default function LocationMap({
 
     // Add fire detection markers (only for high severity)
     fireLocations.forEach((fire) => {
-      // Email context details when fire detected shown
       if (fire.severity === "high") {
         const severityText = fire.severity?.toUpperCase() || "UNKNOWN";
         L.marker([fire.lat, fire.lng], { icon: fireIcon }).addTo(map)
@@ -80,6 +77,7 @@ export default function LocationMap({
     const highSeverityLocations = fireLocations.filter(
       (fire) => fire.severity === "high"
     );
+
     if (highSeverityLocations.length > 0) {
       const bounds = L.latLngBounds([
         L.latLng(latitude, longitude),
@@ -87,9 +85,8 @@ export default function LocationMap({
       ]);
       map.fitBounds(bounds, { padding: [50, 50] });
     } else {
-      // If no fire locations, use a zoom level similar to fire detection
-      // This keeps the map at a good detail level
-      map.setView([latitude, longitude], 16);
+      // If no fire locations, use a detailed zoom level
+      map.setView([latitude, longitude], MAP_CONFIG.DETAILED_ZOOM);
     }
 
     // Cleanup

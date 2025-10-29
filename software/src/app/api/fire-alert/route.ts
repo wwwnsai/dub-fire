@@ -4,6 +4,7 @@ import {
   getNotificationStats,
   sendStatusChangeNotification,
 } from "@/lib/emailService";
+import { FireAlertData, StatusChangeParams } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +19,8 @@ export async function POST(request: NextRequest) {
       typeof body.fromStatus === "string" &&
       typeof body.toStatus === "string"
     ) {
-      const { fromStatus, toStatus, location, coordinates } = body as {
-        fromStatus: "fire" | "non-fire";
-        toStatus: "fire" | "non-fire";
-        location?: string;
-        coordinates?: { lat: number; lng: number };
-      };
+      const { fromStatus, toStatus, location, coordinates } =
+        body as StatusChangeParams;
 
       const success = await sendStatusChangeNotification({
         fromStatus,
@@ -50,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create alert data
-    const alertData = {
+    const alertData: FireAlertData = {
       location: location || "Unknown Location",
       timestamp: new Date().toISOString(),
       severity: severity as "low" | "medium" | "high" | "critical",
