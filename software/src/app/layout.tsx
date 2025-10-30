@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { FireStatusProvider } from "@/lib/fireStatusContext";
 
 // Define metadata for the PWA and SEO
 export const metadata: Metadata = {
@@ -17,15 +18,22 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Sen:wght@400..800&display=swap" rel="stylesheet" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Sen:wght@400..800&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body>
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <FireStatusProvider>
+          <main className="min-h-screen">{children}</main>
+        </FireStatusProvider>
       </body>
     </html>
   );

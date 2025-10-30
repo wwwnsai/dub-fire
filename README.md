@@ -1,4 +1,7 @@
 # dub-fire
 Smart Fire Detection - senior project
 
-matt test push
+To run software:
+cd software
+npm install
+npm run dev

@@ -2,36 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "leaflet/dist/leaflet.css";
+
 .sen-regular {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
-  font-style: normal;
 }
 
-.sen-mudium {
+.sen-medium {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 600;
-  font-style: medium;
+  font-weight: 500;
 }
 
 .sen-semibold {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 700;
-  font-size: 20px;
+  font-weight: 600;
 }
 
 .sen-bold {
   font-family: "Sen", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 800;
-  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 :root {
-  --background: #FAF7F8;
+  --background: #faf7f8;
   --foreground: #171717;
 }
 
@@ -64,5 +62,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: theme('fontFamily.sans');
+  font-family: theme("fontFamily.sans");
 }

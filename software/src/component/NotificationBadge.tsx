@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Bell } from "lucide-react";
 
+import NotiIcon from "./icons/NotiIcon";
+
 interface NotificationBadgeProps {
   count: number;
   notifications?: string[]; // you can replace with a real type later
@@ -21,9 +23,9 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         onClick={() => setOpen(!open)}
         className="relative focus:outline-none"
       >
-        <Bell size={24} className="text-gray-600" />
+        <NotiIcon  />
         {count > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 rounded-full">
+          <span className="absolute -top-2 -right-2 w-4 h-4 bg-[#BB2234] text-white text-xs sen-semibold px-1 rounded-full">
             {count}
           </span>
         )}

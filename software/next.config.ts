@@ -1,4 +1,6 @@
-import withPWA from "next-pwa";
+import withPWA from "@ducanh2912/next-pwa";
+
+import { NextConfig } from 'next';
 
 const pwaConfig = {
   dest: "public",
@@ -6,9 +8,20 @@ const pwaConfig = {
   skipWaiting: true,
 };
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'googleusercontent.com',
+      },
+    ],
+  },
 };
 
 export default withPWA(pwaConfig)(nextConfig);
