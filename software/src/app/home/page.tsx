@@ -58,7 +58,7 @@ export default function Home() {
             Fire Alert System
           </h1>
         </div>
-        <FireAlertTest />
+        {/* <FireAlertTest /> */}
       </div>
     </Layout>
   );

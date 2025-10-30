@@ -18,10 +18,10 @@ export default function Page() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const [emailNotifications, setEmailNotifications] = useState(false);
+
     useEffect(() => {
-      // This function will run immediately
       const fetchData = async () => {
-        // 1. Actively get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
@@ -31,7 +31,6 @@ export default function Page() {
         }
 
         if (session) {
-          // 2. We have a session, fetch the user and profile
           const currentUser = session.user;
           setUser(currentUser);
 
@@ -45,10 +44,10 @@ export default function Page() {
             console.error("Profile Error:", profileError.message);
           } else {
             setProfile(profileData);
+            setEmailNotifications(profileData?.email_noti);
           }
-          setLoading(false); // 3. Set loading false *after* data is fetched
+          setLoading(false);
         } else {
-          // 4. No session, redirect to login
           setLoading(false);
           router.push("/login");
         }
@@ -56,11 +55,9 @@ export default function Page() {
 
       fetchData();
 
-      // 5. Still listen for future changes (like logging out)
       const { data: authListener } = supabase.auth.onAuthStateChange(
         (event, session) => {
           if (event === "SIGNED_OUT") {
-            // If the user logs out (e.g., in another tab), redirect
             setProfile(null);
             setUser(null);
             router.push("/login");
@@ -68,11 +65,38 @@ export default function Page() {
         }
       );
 
-      // 6. Cleanup the listener
       return () => {
         authListener.subscription.unsubscribe();
       };
     }, [router]);
+
+    async function handleSwitchToggle() {
+      const newStatus = !emailNotifications;
+
+      setEmailNotifications(newStatus);
+
+      const [profileUpdate, subscriptionUpdate] = await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ email_noti: newStatus })
+          .eq("id", user!.id),
+        
+        supabase
+          .from("email_subscriptions")
+          .update({ is_active: newStatus })
+          .eq("id", user!.id)
+      ]);
+      
+      if (profileUpdate.error) {
+        console.error("Error updating profile:", profileUpdate.error.message);
+        setEmailNotifications(!newStatus);
+      }
+
+      if (subscriptionUpdate.error) {
+        console.error("Error updating subscription:", subscriptionUpdate.error.message);
+        setEmailNotifications(!newStatus);
+      }
+    }
 
     type InfoItem = { title: string; description: string };
     type InfoCard = Record<string, InfoItem>;
@@ -80,38 +104,38 @@ export default function Page() {
     const info: InfoCard[] = [
         {
         "1": {
-            title: "Username",
-            description: loading ? "Loading..." : profile?.username || "No Username"
+          title: "Username",
+          description: loading ? "Loading..." : profile?.username || "No Username"
         },
         "2": {
-            title: "Email",
-            description: loading ? "Loading..." : user?.email || "No Email"
+          title: "Email",
+          description: loading ? "Loading..." : user?.email || "No Email"
         }
         },
         {
         "1": {
-            title: "Old Password",
-            description: ""
+          title: "Old Password",
+          description: ""
         },
         "2": {
-            title: "New Password",
-            description: ""
+          title: "New Password",
+          description: ""
         },
         "3": {
-            title: "Confirm Password",
-            description: ""
+          title: "Confirm Password",
+          description: ""
         }
         },
         {
         "1": {
-            title: "Email Notification",
-            description: "Switch"
+          title: "Email Notification",
+          description: emailNotifications ? "On" : "Off"
         }
         },
         {
         "1": {
-            title: "Logout",
-            description: "" 
+          title: "Logout",
+          description: "" 
         }
         }
     ]
@@ -149,7 +173,7 @@ export default function Page() {
         </button>
       </div>
       <div className="mt-10">
-        <InfoCards infoData={info} />
+        <InfoCards infoData={info} switchFunc={handleSwitchToggle} />
       </div>
     </main>
   )

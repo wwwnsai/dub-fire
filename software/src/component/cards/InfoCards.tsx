@@ -1,9 +1,16 @@
 import LogoutButton from "../buttons/LogoutButton"
+import SwitchButton from "../buttons/SwitchButton";
 
 type InfoItem = { title: string; description: string };
 type InfoCard = Record<string, InfoItem>;
 
-export default function InfoCards({infoData}: {infoData?: InfoCard[]}) {
+export default function InfoCards({
+  infoData,
+  switchFunc
+}: {
+  infoData?: InfoCard[];
+  switchFunc: () => void;
+}) {
 
   return (
     <div>
@@ -22,12 +29,8 @@ export default function InfoCards({infoData}: {infoData?: InfoCard[]}) {
                                 >
                                     {item.title}
                                 </h3>
-                                {item.description === "Switch" ? (
-                                    // <Switch
-                                    //     checked={item.description === "On"}
-                                    //     onChange={() => handleToggle(item.id)}
-                                    // />
-                                    <p className="sen-regular text-text-secondary">Switch</p>
+                                {item.title === "Email Notification" ? (console.log('Email Notification status:', item.description), 
+                                    <SwitchButton status={item.description === "On"} switchFunc={switchFunc} />
                                 ) : (
                                     <p className="sen-regular text-text-secondary">{item.description}</p>
                                 )}

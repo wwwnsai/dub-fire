@@ -35,9 +35,14 @@ export default function SignupPage() {
   };
 
   const handleOAuthSignup = async (provider: string) => {
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ provider: provider as any });
-    if (oauthError) setError(oauthError.message);
-  };
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({ 
+      provider: provider as any 
+    });
+    
+    if (oauthError) {
+      setError(oauthError.message);
+    }
+  };
 
   return (
     <div className="h-full">
