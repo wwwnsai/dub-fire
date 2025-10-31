@@ -37,29 +37,6 @@ export default function Home() {
         />
       </div>
 
-      <div className="mt-4">
-        <div className="mb-2">
-          <h1 className="sen-regular text-xl py-2" style={{ color: "#5a5a5a" }}>
-            Live Camera
-          </h1>
-        </div>
-        <Image
-          src={WebCamPhoto}
-          alt="Live camera feed"
-          width={640}
-          height={640}
-          className="rounded-lg shadow"
-        />
-      </div>
-
-      <div className="mt-4">
-        <div className="mb-2">
-          <h1 className="sen-regular text-xl py-4" style={{ color: "#5a5a5a" }}>
-            Fire Alert System
-          </h1>
-        </div>
-        {/* <FireAlertTest /> */}
-      </div>
     </Layout>
   );
 }

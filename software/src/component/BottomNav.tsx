@@ -25,10 +25,10 @@ const BottomNav = () => {
         </Link>
       </div>
 
-      {/* Dashboard */}
+      {/* Camera */}
       <div className="w-1/4 pt-4">
-        <Link href="/dashboard" className={linkClass("/dashboard")}>
-          <DashboardIcon active={pathname === "/dashboard"} />
+        <Link href="/camera" className={linkClass("/camera")}>
+          <DashboardIcon active={pathname === "/camera"} />
         </Link>
       </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
 import Layout from "@/component/Layout";
+import Image from "next/image";
+import WebCamPhoto from "../../photo/web.png";
 
 export default function Page() {
   return (
@@ -11,6 +13,13 @@ export default function Page() {
             Dashboard
           </h1>
         </div>
+        <Image
+          src={WebCamPhoto}
+          alt="Live camera feed"
+          width={640}
+          height={640}
+          className="rounded-lg shadow"
+        />
       </div>
     </Layout>
   )
