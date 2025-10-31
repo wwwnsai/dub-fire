@@ -10,7 +10,7 @@ export default function Page() {
       <div className="mt-2">
         <div className="mb-2">
           <h1 className="sen-regular text-xl text-text-secondary">
-            Dashboard
+            Live Camera
           </h1>
         </div>
         <Image

@@ -1,9 +1,9 @@
 "use client"
 
-import Layout from "@/component/Layout" // Assuming you'll use this later
+import Layout from "@/component/Layout"
 import Image from "next/image"
 import BackButton from "@/component/buttons/BackButton";
-import pfp from '@/photo/pfp.jpg' // Fallback profile picture
+import pfp from '@/photo/pfp.jpg';
 import InfoCards from "@/component/cards/InfoCards";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -13,132 +13,132 @@ import { Profile } from "@/lib/types/users";
 
 
 export default function Page() {
-    const router = useRouter();
-    const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<Profile | null>(null);
-    const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    const [emailNotifications, setEmailNotifications] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(false);
 
-    useEffect(() => {
-      const fetchData = async () => {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError) {
-          console.error("Error getting session:", sessionError.message);
-          setLoading(false);
-          return;
-        }
+      if (sessionError) {
+        console.error("Error getting session:", sessionError.message);
+        setLoading(false);
+        return;
+      }
 
-        if (session) {
-          const currentUser = session.user;
-          setUser(currentUser);
+      if (session) {
+        const currentUser = session.user;
+        setUser(currentUser);
 
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", currentUser.id)
-            .maybeSingle();
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .maybeSingle();
 
-          if (profileError) {
-            console.error("Profile Error:", profileError.message);
-          } else {
-            setProfile(profileData);
-            setEmailNotifications(profileData?.email_noti);
-          }
-          setLoading(false);
+        if (profileError) {
+          console.error("Profile Error:", profileError.message);
         } else {
-          setLoading(false);
+          setProfile(profileData);
+          setEmailNotifications(profileData?.email_noti);
+        }
+        setLoading(false);
+      } else {
+        setLoading(false);
+        router.push("/login");
+      }
+    };
+
+    fetchData();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_OUT") {
+          setProfile(null);
+          setUser(null);
           router.push("/login");
         }
-      };
+      }
+    );
 
-      fetchData();
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [router]);
 
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        (event, session) => {
-          if (event === "SIGNED_OUT") {
-            setProfile(null);
-            setUser(null);
-            router.push("/login");
-          }
-        }
-      );
+  async function handleSwitchToggle() {
+    const newStatus = !emailNotifications;
 
-      return () => {
-        authListener.subscription.unsubscribe();
-      };
-    }, [router]);
+    setEmailNotifications(newStatus);
 
-    async function handleSwitchToggle() {
-      const newStatus = !emailNotifications;
-
-      setEmailNotifications(newStatus);
-
-      const [profileUpdate, subscriptionUpdate] = await Promise.all([
-        supabase
-          .from("profiles")
-          .update({ email_noti: newStatus })
-          .eq("id", user!.id),
-        
-        supabase
-          .from("email_subscriptions")
-          .update({ is_active: newStatus })
-          .eq("id", user!.id)
-      ]);
+    const [profileUpdate, subscriptionUpdate] = await Promise.all([
+      supabase
+        .from("profiles")
+        .update({ email_noti: newStatus })
+        .eq("id", user!.id),
       
-      if (profileUpdate.error) {
-        console.error("Error updating profile:", profileUpdate.error.message);
-        setEmailNotifications(!newStatus);
-      }
-
-      if (subscriptionUpdate.error) {
-        console.error("Error updating subscription:", subscriptionUpdate.error.message);
-        setEmailNotifications(!newStatus);
-      }
+      supabase
+        .from("email_subscriptions")
+        .update({ is_active: newStatus })
+        .eq("id", user!.id)
+    ]);
+    
+    if (profileUpdate.error) {
+      console.error("Error updating profile:", profileUpdate.error.message);
+      setEmailNotifications(!newStatus);
     }
 
-    type InfoItem = { title: string; description: string };
-    type InfoCard = Record<string, InfoItem>;
+    if (subscriptionUpdate.error) {
+      console.error("Error updating subscription:", subscriptionUpdate.error.message);
+      setEmailNotifications(!newStatus);
+    }
+  }
 
-    const info: InfoCard[] = [
-        {
-        "1": {
-          title: "Username",
-          description: loading ? "Loading..." : profile?.username || "No Username"
-        },
-        "2": {
-          title: "Email",
-          description: loading ? "Loading..." : user?.email || "No Email"
-        }
-        },
-        {
-        "1": {
-          title: "Old Password",
-          description: ""
-        },
-        "2": {
-          title: "New Password",
-          description: ""
-        },
-        "3": {
-          title: "Confirm Password",
-          description: ""
-        }
-        },
-        {
-        "1": {
-          title: "Email Notification",
-          description: emailNotifications ? "On" : "Off"
-        }
-        },
-        {
-        "1": {
-          title: "Logout",
-          description: "" 
-        }
-        }
-    ]
+  type InfoItem = { title: string; description: string };
+  type InfoCard = Record<string, InfoItem>;
+
+  const info: InfoCard[] = [
+      {
+      "1": {
+        title: "Username",
+        description: loading ? "Loading..." : profile?.username || "No Username"
+      },
+      "2": {
+        title: "Email",
+        description: loading ? "Loading..." : user?.email || "No Email"
+      }
+      },
+      {
+      "1": {
+        title: "Old Password",
+        description: ""
+      },
+      "2": {
+        title: "New Password",
+        description: ""
+      },
+      "3": {
+        title: "Confirm Password",
+        description: ""
+      }
+      },
+      {
+      "1": {
+        title: "Email Notification",
+        description: emailNotifications ? "On" : "Off"
+      }
+      },
+      {
+      "1": {
+        title: "Logout",
+        description: "" 
+      }
+      }
+  ]
 
   return (
     <main className="min-h-screen flex flex-col bg-background-light px-6 pt-6 pb-4">
