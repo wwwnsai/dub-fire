@@ -119,7 +119,7 @@ export default function Page() {
                 .eq("id", user.id),
             
             supabase
-                .from("email_subscriptions")
+                .from("profiles")
                 .update({ is_active: newStatus })
                 .eq("id", user.id)
         ]);

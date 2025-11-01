@@ -11,6 +11,21 @@ import {
 import { EMAIL_CONFIG, ERROR_MESSAGES } from "./constants";
 import { sanitizeHtml } from "./utils";
 
+//cant find updateNotificationTracking
+//so we will create a new function to update the notification tracking
+async function updateNotificationTracking(subscriberIds: string[]): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ last_notified_at: new Date().toISOString() })
+      .in("id", subscriberIds);
+  } catch (error) {
+    console.error("Error in updateNotificationTracking:", error);
+  }
+}
+
+
+
 // Initialize email providers
 let resend: Resend | null = null;
 if (process.env.RESEND_API_KEY) {
@@ -109,22 +124,32 @@ const emailTemplates = {
 };
 
 /**
- * Get all active email subscriptions from Supabase
+ * Get all active email subscriptions from profiles table
+ * Uses email_noti field instead of is_active
  */
 export async function getActiveSubscriptions(): Promise<EmailSubscription[]> {
   try {
     const { data, error } = await supabase
-      .from("email_subscriptions")
+      .from("profiles")
       .select("*")
-      .eq("is_active", true)
+      .eq("email_noti", true)
+      .not("email", "is", null) // Only get profiles with email
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Error fetching email subscriptions:", error);
+      console.error("Error fetching email subscriptions from profiles:", error);
       return [];
     }
 
-    return data || [];
+    // Map profiles data to EmailSubscription format
+    return (data || []).map((profile) => ({
+      id: profile.id,
+      email: profile.email,
+      created_at: profile.created_at,
+      email_noti: profile.email_noti ?? false,
+      username: profile.username,
+      avatar_url: profile.avatar_url,
+    }));
   } catch (error) {
     console.error("Error in getActiveSubscriptions:", error);
     return [];
@@ -222,22 +247,13 @@ export async function sendStatusChangeNotification(
 }
 
 /**
- * Update notification tracking for subscribers
- */
+
 async function updateNotificationTracking(
   subscriberIds: string[]
 ): Promise<void> {
   try {
-    const { error } = await supabase
-      .from("email_subscriptions")
-      .update({
-        last_notified_at: new Date().toISOString(),
-      })
-      .in("id", subscriberIds);
 
-    if (error) {
-      console.error("Error updating notification tracking:", error);
-    }
+
   } catch (error) {
     console.error("Error in updateNotificationTracking:", error);
   }
@@ -262,13 +278,14 @@ export async function simulateFireDetection(): Promise<void> {
 }
 
 /**
- * Get notification statistics
+ * Get notification statistics from profiles table
  */
 export async function getNotificationStats(): Promise<NotificationStats> {
   try {
     const { data, error } = await supabase
-      .from("email_subscriptions")
-      .select("is_active, last_notified_at");
+      .from("profiles")
+      .select("email_noti, email")
+      .not("email", "is", null); // Only count profiles with email
 
     if (error) {
       console.error("Error fetching notification stats:", error);
@@ -276,19 +293,16 @@ export async function getNotificationStats(): Promise<NotificationStats> {
     }
 
     const totalSubscribers = data?.length || 0;
-    const activeSubscribers = data?.filter((sub) => sub.is_active).length || 0;
-    const lastNotificationSent = data
-      ?.filter((sub) => sub.last_notified_at)
-      ?.sort(
-        (a, b) =>
-          new Date(b.last_notified_at!).getTime() -
-          new Date(a.last_notified_at!).getTime()
-      )[0]?.last_notified_at;
+    const activeSubscribers =
+      data?.filter((profile) => profile.email_noti === true).length || 0;
+
+    // Note: profiles table doesn't have last_notified_at column
+    // If you need this, add the column to the profiles table
 
     return {
       totalSubscribers,
       activeSubscribers,
-      lastNotificationSent,
+      // lastNotificationSent is undefined since the column doesn't exist
     };
   } catch (error) {
     console.error("Error in getNotificationStats:", error);

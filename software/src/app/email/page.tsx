@@ -27,34 +27,55 @@ export default function EmailPage() {
         return;
       }
 
-      // Insert email into Supabase
-      const { error } = await supabase.from("email_subscriptions").insert([
-        {
-          email: email.toLowerCase().trim(),
-          created_at: new Date().toISOString(),
-          is_active: true,
-        },
-      ]);
+      // Insert or update profile with email notification enabled
+      // First, check if profile exists with this email
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id, email_noti")
+        .eq("email", email.toLowerCase().trim())
+        .single();
 
-      if (error) {
-        if (error.code === "23505") {
-          // Unique constraint violation
-          setMessage("This email is already registered for notifications");
-        } else {
-          setMessage("Failed to register email. Please try again.");
+      if (existingProfile) {
+        // Update existing profile to enable email notifications
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            email_noti: true,
+          })
+          .eq("id", existingProfile.id);
+
+        if (error) {
+          setMessage("Failed to update email notification preference.");
+          setIsSuccess(false);
+          return;
         }
-        setIsSuccess(false);
       } else {
-        setMessage("Successfully registered for fire alerts!");
-        setIsSuccess(true);
-        setEmail(""); // Clear the form
+        // Insert new profile with email notification enabled
+        const { error } = await supabase.from("profiles").insert([
+          {
+            email: email.toLowerCase().trim(),
+            email_noti: true,
+            created_at: new Date().toISOString(),
+          },
+        ]);
 
-        eventBus.emit("email:registered", {
-          email,
-          time: new Date().toISOString(),
-        });
+        if (error) {
+          setMessage("Failed to register email. Please try again.");
+          setIsSuccess(false);
+          return;
+        }
       }
-    } catch (error) {
+
+      // Success - email notification enabled
+      setMessage("Successfully registered for fire alerts!");
+      setIsSuccess(true);
+      setEmail(""); // Clear the form
+
+      eventBus.emit("email:registered", {
+        email,
+        time: new Date().toISOString(),
+      });
+    } catch {
       setMessage("An error occurred. Please try again.");
       setIsSuccess(false);
     } finally {

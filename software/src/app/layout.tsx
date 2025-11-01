@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { FireStatusProvider } from "@/lib/fireStatusContext";
+import EmailEventListenerProvider from "@/component/EmailEventListenerProvider";
 
 // Define metadata for the PWA and SEO
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default function RootLayout({
       </head>
       <body>
         <FireStatusProvider>
+          <EmailEventListenerProvider />
           <main className="min-h-screen">{children}</main>
         </FireStatusProvider>
       </body>

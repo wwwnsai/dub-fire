@@ -80,8 +80,8 @@ const Layout = ({ children }: LayoutProps) => {
           <NotificationBadge
             count={2}
             notifications={[
-              "bullshit1",
-              "bullshit2",
+              "test",
+              "test2",
             ]}
           />
         </div>

@@ -1,23 +1,18 @@
 "use client";
 
 import Layout from "@/component/Layout";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Navigation, AlertCircle, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useFireStatus } from "@/lib/fireStatusContext";
-import { Location, FireLocation, SeverityChange } from "@/lib/types";
+import { Location, FireLocation } from "@/lib/types";
+import { ERROR_MESSAGES } from "@/lib/constants";
 import {
-  ERROR_MESSAGES,
-  API_ENDPOINTS,
-} from "@/lib/constants";
-import {
-  generateLocationId,
-  severityToFireStatus,
-  detectSeverityChanges,
   getGeolocationErrorMessage,
   generateGoogleMapsUrl,
   formatTimestamp,
 } from "@/lib/utils";
+import { eventBus } from "@/lib/eventBus";
 
 const MapWithNoSSR = dynamic(() => import("@/component/LocationMap"), {
   ssr: false,
@@ -35,67 +30,38 @@ export default function MapPage() {
   // Use shared fire status context
   const { fireLocations, setFireLocations } = useFireStatus();
 
-  // Track previous severity states for change detection
-  const previousSeveritiesRef = useRef<Record<string, "fire" | "non-fire">>({});
-
   useEffect(() => {
     getCurrentLocation();
   }, []);
 
-  // Function to send email alert for severity changes
-  const sendSeverityChangeAlert = async (change: SeverityChange) => {
-    try {
-      const response = await fetch(API_ENDPOINTS.FIRE_ALERT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fromStatus: change.fromStatus,
-          toStatus: change.toStatus,
-          location: change.location,
-          coordinates: change.coordinates,
-        }),
-      });
-
-      if (response.ok) {
-        console.log(
-          `✅ Email alert sent for ${change.fromStatus} → ${change.toStatus}`
-        );
-      } else {
-        console.error("❌ Failed to send email alert:", await response.text());
-      }
-    } catch (error) {
-      console.error("❌ Error sending email alert:", error);
-    }
-  };
-
-  // Effect to monitor severity changes
+  // Listen to fire status change events (event-driven architecture)
   useEffect(() => {
-    if (fireLocations.length === 0) return;
+    const handleFireStatusChange = (event: {
+      locationId: string;
+      fromStatus: "fire" | "non-fire";
+      toStatus: "fire" | "non-fire";
+      location: {
+        lat: number;
+        lng: number;
+        name?: string;
+        severity?: "non-fire" | "high";
+      };
+    }) => {
+      console.log(
+        `🗺️ Map received fire status change event: ${event.fromStatus} → ${event.toStatus}`
+      );
+      // Map will automatically update via fireLocations from context
+      // The event is already handled by emailEventListener for notifications
+    };
 
-    const changes = detectSeverityChanges(
-      fireLocations,
-      previousSeveritiesRef.current
-    );
+    // Subscribe to fire status change events
+    eventBus.on("fire:status-changed", handleFireStatusChange);
 
-    // Send email alerts for all changes
-    changes.forEach((change) => {
-      sendSeverityChangeAlert(change);
-    });
-
-    // Update previous severities after processing changes
-    if (changes.length > 0) {
-      console.log(`🔥 Detected ${changes.length} severity changes:`, changes);
-    }
-
-    // Always update the ref with current severities
-    fireLocations.forEach((location) => {
-      const locationId = generateLocationId(location.lat, location.lng);
-      const currentStatus = severityToFireStatus(location.severity);
-      previousSeveritiesRef.current[locationId] = currentStatus;
-    });
-  }, [fireLocations]);
+    // Cleanup
+    return () => {
+      eventBus.off("fire:status-changed", handleFireStatusChange);
+    };
+  }, []);
 
   const getCurrentLocation = () => {
     setIsLoading(true);
@@ -111,10 +77,13 @@ export default function MapPage() {
     }
 
     // Check if we're on HTTPS or localhost
-    const isSecureContext = window.isSecureContext || window.location.hostname === 'localhost';
+    const isSecureContext =
+      window.isSecureContext || window.location.hostname === "localhost";
     if (!isSecureContext) {
       console.warn("⚠️ Geolocation requires HTTPS or localhost");
-      setError("Geolocation requires a secure connection (HTTPS) or localhost. Please use HTTPS or run locally.");
+      setError(
+        "Geolocation requires a secure connection (HTTPS) or localhost. Please use HTTPS or run locally."
+      );
       setIsLoading(false);
       return;
     }
@@ -190,12 +159,16 @@ export default function MapPage() {
   };
 
   // Function to simulate severity changes (for testing)
+  // This will trigger the event-driven architecture
   const simulateSeverityChange = () => {
     setFireLocations((prev: FireLocation[]) =>
       prev.map((location: FireLocation) => ({
         ...location,
         severity: location.severity === "high" ? "non-fire" : "high",
-        name: location.severity === "high" ? "Fire Cleared" : "Fire Detected",
+        name:
+          location.severity === "high"
+            ? "Fire Cleared"
+            : "Fire Detected - Test Alert",
       }))
     );
   };
@@ -205,14 +178,16 @@ export default function MapPage() {
       <div className="mt-2">
         {/* Header */}
         <div className="flex justify-between mb-2">
-          <h1 className="sen-regular text-xl text-text-secondary">Your Location</h1>
+          <h1 className="sen-regular text-xl text-text-secondary">
+            Your Location
+          </h1>
           <div className="flex space-x-2">
-            {/* <button
+            <button
               onClick={simulateSeverityChange}
-              className="px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
             >
               🔥 Test Fire Alert
-            </button> */}
+            </button>
             <button
               onClick={refreshLocation}
               className="p-2 bg-primary-light text-white rounded-full hover:bg-orange-600 transition-colors"
@@ -227,7 +202,9 @@ export default function MapPage() {
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
             <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-            <p className="sen-regular text-text-secondary">Getting your location...</p>
+            <p className="sen-regular text-text-secondary">
+              Getting your location...
+            </p>
           </div>
         )}
 
@@ -238,7 +215,7 @@ export default function MapPage() {
             <div className="flex-1">
               <p className="text-red-800 sen-medium">Location Error</p>
               <p className="text-red-600 text-sm mt-1">{error}</p>
-              
+
               {/* Manual Location Input */}
               <div className="mt-4">
                 <button
@@ -247,7 +224,7 @@ export default function MapPage() {
                 >
                   {showManualInput ? "Hide" : "Enter location manually"}
                 </button>
-                
+
                 {showManualInput && (
                   <div className="mt-3 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
@@ -333,13 +310,17 @@ export default function MapPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="sen-regular text-text-secondary text-xs mb-1">Latitude</p>
+                  <p className="sen-regular text-text-secondary text-xs mb-1">
+                    Latitude
+                  </p>
                   <p className="sen-semibold text-text-secondary text-lg">
                     {userLocation.lat.toFixed(6)}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="sen-regular text-text-secondary text-xs mb-1">Longitude</p>
+                  <p className="sen-regular text-text-secondary text-xs mb-1">
+                    Longitude
+                  </p>
                   <p className="sen-semibold text-text-secondary text-lg">
                     {userLocation.lng.toFixed(6)}
                   </p>
@@ -386,7 +367,9 @@ export default function MapPage() {
                       : "text-green-500"
                   }`}
                 />
-                <h3 className="sen-semibold text-text-secondary">Safety Status</h3>
+                <h3 className="sen-semibold text-text-secondary">
+                  Safety Status
+                </h3>
               </div>
               <p
                 className={`sen-regular text-sm ${

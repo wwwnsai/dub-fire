@@ -4,9 +4,9 @@ export interface EmailSubscription {
   id: string;
   email: string;
   created_at: string;
-  is_active: boolean;
-  last_notified_at?: string;
-  notification_count: number;
+  email_noti: boolean;
+  username?: string; // Optional - from profiles table
+  avatar_url?: string; // Optional - from profiles table
 }
 
 export interface FireAlertData {
