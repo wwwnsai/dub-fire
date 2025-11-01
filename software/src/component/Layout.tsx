@@ -22,37 +22,51 @@ const Layout = ({ children }: LayoutProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-          console.log("Auth Event:", event);
-          if (session) {
-              console.log("Session:", session);
-              const currentUser = session.user;
-              setUser(currentUser);
+    const fetchData = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-              const { data: profileData, error: profileError } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", currentUser.id)
-                .maybeSingle();
+      if (sessionError) {
+        console.error("Error getting session:", sessionError.message);
+      } else if (session) {
+        const currentUser = session.user;
+        console.log("Current User:", currentUser);
+        setUser(currentUser);
 
-              if (profileError) {
-                console.error("Profile Error:", profileError.message);
-              } else {
-                console.log("Profile Data:", profileData);
-                setProfile(profileData);
-              }
-          } else {
-            setUser(null);
-            setProfile(null);
-          }
-          setLoading(false);
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Profile Error:", profileError.message);
+        } else {
+          console.log("Profile Data:", profileData);
+          setProfile(profileData);
+        }
       }
-      );
+      setLoading(false);
+    };
 
-      return () => {
-          authListener.subscription.unsubscribe();
-      };
+    fetchData();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_IN") {
+          setUser(session!.user);
+          fetchData(); 
+        }
+
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          setProfile(null);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [router]);
   return (
     <div className="min-h-screen flex flex-col bg-background-light">
@@ -73,7 +87,7 @@ const Layout = ({ children }: LayoutProps) => {
           <span 
             className={`${profile ? 'sen-regular ml-2 text-text-primary' : 'sen-medium text-primary-light bg-secondary-beige rounded-lg px-4 py-1'} text-md `}
           >
-            {profile?.username || "Log In"}
+            {profile ? profile.username ?? profile.email : "Log In"}
           </span>
         </button>
         <div className="w-1/4 flex justify-end items-center pr-6 pt-6 pb-4">
