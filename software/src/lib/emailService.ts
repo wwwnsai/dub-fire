@@ -68,7 +68,7 @@ async function deliverEmail(params: EmailParams): Promise<void> {
 }
 
 /**
- * Email template generators
+ * Email template 
  */
 const emailTemplates = {
   fireAlert: (alertData: FireAlertData): string => `
@@ -125,7 +125,6 @@ const emailTemplates = {
 
 /**
  * Get all active email subscriptions from profiles table
- * Uses email_noti field instead of is_active
  */
 export async function getActiveSubscriptions(): Promise<EmailSubscription[]> {
   try {
@@ -248,16 +247,6 @@ export async function sendStatusChangeNotification(
 
 /**
 
-async function updateNotificationTracking(
-  subscriberIds: string[]
-): Promise<void> {
-  try {
-
-
-  } catch (error) {
-    console.error("Error in updateNotificationTracking:", error);
-  }
-}
 
 /**
  * Simulate fire detection and trigger notifications
@@ -296,13 +285,9 @@ export async function getNotificationStats(): Promise<NotificationStats> {
     const activeSubscribers =
       data?.filter((profile) => profile.email_noti === true).length || 0;
 
-    // Note: profiles table doesn't have last_notified_at column
-    // If you need this, add the column to the profiles table
-
     return {
       totalSubscribers,
       activeSubscribers,
-      // lastNotificationSent is undefined since the column doesn't exist
     };
   } catch (error) {
     console.error("Error in getNotificationStats:", error);
