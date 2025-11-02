@@ -31,6 +31,7 @@ const FireStatusContext = createContext<FireStatusContextType | undefined>(
   undefined
 );
 
+// Mock fire location for ECC
 export function FireStatusProvider({ children }: { children: ReactNode }) {
   const [fireLocations, setFireLocations] = useState<FireLocation[]>([
     {
