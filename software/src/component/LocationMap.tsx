@@ -49,7 +49,7 @@ export default function LocationMap({
       popupAnchor: [0, -41],
     });
 
-    // Add marker for user location
+    // Add marker for user current location
     L.marker([latitude, longitude], { icon: userIcon })
       .addTo(map)
       .bindPopup("📍 Your Current Location");
