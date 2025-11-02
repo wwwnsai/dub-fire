@@ -25,10 +25,13 @@ export default function LocationMap({
     );
 
     // Add OpenStreetMap tile layer
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    // L.tileLayer("https://{s}.tile.openstreetmap.org/15/17654/10932.png", {
+  {
+    attribution: "©",
+    maxZoom: 19,
+  }
+).addTo(map);
 
     // Create custom icon for user location (pin icon)
     const userIcon = L.icon({

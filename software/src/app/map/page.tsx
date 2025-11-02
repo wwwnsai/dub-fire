@@ -50,8 +50,6 @@ export default function MapPage() {
       console.log(
         `🗺️ Map received fire status change event: ${event.fromStatus} → ${event.toStatus}`
       );
-      // Map will automatically update via fireLocations from context
-      // The event is already handled by emailEventListener for notifications
     };
 
     // Subscribe to fire status change events
