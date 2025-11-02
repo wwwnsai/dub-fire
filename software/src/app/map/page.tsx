@@ -396,33 +396,6 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Instructions */}
-        {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-medium text-blue-900 mb-2">
-            📍 About Location Tracking
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Location is fetched when you open this page</li>
-            <li>• Click the refresh button to update your position</li>
-            <li>• Location is used to show nearby fire alerts</li>
-            <li>• You can view your location on Google Maps</li>
-            <li>• <strong>HTTPS required:</strong> Geolocation only works on secure connections</li>
-            <li>• <strong>Permission needed:</strong> Allow location access when prompted</li>
-            <li>• <strong>Fallback:</strong> Use manual input if automatic detection fails</li>
-          </ul>
-          
-          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-            <p className="text-sm text-yellow-800">
-              <strong>💡 Troubleshooting:</strong> If location isn&apos;t working, try:
-            </p>
-            <ul className="text-sm text-yellow-700 mt-1 ml-4">
-              <li>• Check if you&apos;re using HTTPS or localhost</li>
-              <li>• Allow location permissions in your browser</li>
-              <li>• Try refreshing the page</li>
-              <li>• Use the manual input option</li>
-            </ul>
-          </div>
-        </div> */}
       </div>
     </Layout>
   );
