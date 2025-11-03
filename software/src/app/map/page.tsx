@@ -88,7 +88,6 @@ export default function MapPage() {
 
     console.log("✅ Geolocation supported, requesting position...");
 
-    //get current location
     navigator.geolocation.getCurrentPosition(
       (position) => {
         console.log("✅ Location obtained:", position.coords);
@@ -396,6 +395,7 @@ export default function MapPage() {
             </div>
           </div>
         )}
+
       </div>
     </Layout>
   );
