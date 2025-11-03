@@ -5,29 +5,63 @@ import { AlertTriangle, Send, Users, Clock } from "lucide-react";
 import { NotificationStats } from "@/lib/types";
 import { API_ENDPOINTS } from "@/lib/constants";
 import { eventBus } from "@/lib/eventBus";
+import { useFireStatus } from "@/lib/fireStatusContext";
+import { generateLocationId } from "@/lib/utils";
 
 export default function FireAlertTest() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [stats, setStats] = useState<NotificationStats | null>(null);
+  const { fireLocations, updateFireLocation, getCurrentFireStatus } =
+    useFireStatus();
 
   const triggerFireAlert = async () => {
     setIsLoading(true);
     setMessage("");
 
     try {
+      // Find the default ECC location or use the first location
+      const defaultLocation =
+        fireLocations.find(
+          (loc) =>
+            generateLocationId(loc.lat, loc.lng) ===
+            generateLocationId(13.726849, 100.767144)
+        ) || fireLocations[0];
+
+      if (!defaultLocation) {
+        setMessage("Error: No fire location found.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Toggle between "fire" and "non-fire"
+      const currentStatus = getCurrentFireStatus();
+      const newSeverity = currentStatus === "alert" ? "non-fire" : "high";
+      const newStatus = newSeverity === "high" ? "fire" : "non-fire";
+      const locationId = generateLocationId(
+        defaultLocation.lat,
+        defaultLocation.lng
+      );
+
+      // Update the fire location status
+      updateFireLocation(locationId, {
+        severity: newSeverity,
+        name: newSeverity === "high" ? "Fire Detected" : "Fire Cleared",
+      });
+
+      // Send notification if it's a status change (not initial state)
       const response = await fetch(API_ENDPOINTS.FIRE_ALERT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          status: "fire",
-          location: "Dubai Fire Station",
-          severity: "high",
+          fromStatus: currentStatus === "alert" ? "fire" : "non-fire",
+          toStatus: newStatus,
+          location: defaultLocation.name || "Dubai Fire Station",
           coordinates: {
-            lat: 25.2048,
-            lng: 55.2708,
+            lat: defaultLocation.lat,
+            lng: defaultLocation.lng,
           },
         }),
       });
@@ -35,21 +69,25 @@ export default function FireAlertTest() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("Fire alert sent successfully! Check console for details.");
+        setMessage(
+          `Status changed to ${
+            newStatus === "fire" ? "FIRE" : "NON-FIRE"
+          }! Check console for details.`
+        );
         fetchStats(); // Refresh stats
 
         // ✅ Emit an event locally
         eventBus.emit("fire:alert", {
-          status: "fire",
-          location: "Dubai Fire Station",
-          severity: "high",
+          status: newStatus,
+          location: defaultLocation.name || "Dubai Fire Station",
+          severity: newSeverity === "high" ? "high" : "low",
           time: new Date().toISOString(),
         });
       } else {
         setMessage(`Error: ${data.error}`);
       }
     } catch (error) {
-      setMessage("Failed to send fire alert. Please try again.");
+      setMessage("Failed to toggle fire status. Please try again.");
       console.error("Error triggering fire alert:", error);
     } finally {
       setIsLoading(false);
@@ -113,10 +151,20 @@ export default function FireAlertTest() {
       <button
         onClick={triggerFireAlert}
         disabled={isLoading}
-        className="w-full bg-red-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+        className={`w-full py-3 px-4 rounded-lg font-medium focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2 ${
+          getCurrentFireStatus() === "alert"
+            ? "bg-green-500 text-white hover:bg-green-600 focus:ring-green-500"
+            : "bg-red-500 text-white hover:bg-red-600 focus:ring-red-500"
+        }`}
       >
         <Send className="w-5 h-5" />
-        <span>{isLoading ? "Sending Alert..." : "Test Fire Alert"}</span>
+        <span>
+          {isLoading
+            ? "Toggling Status..."
+            : getCurrentFireStatus() === "alert"
+            ? "Set to Non-Fire"
+            : "Set to Fire"}
+        </span>
       </button>
 
       {/* Message Display */}
