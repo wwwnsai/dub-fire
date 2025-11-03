@@ -31,19 +31,75 @@ const FireStatusContext = createContext<FireStatusContextType | undefined>(
   undefined
 );
 
+// Default fire location for ECC
+const DEFAULT_STATUS: FireLocation[] = [
+  {
+    lat: 13.726849,
+    lng: 100.767144,
+    name: "Fire Detected",
+    severity: "non-fire",
+  },
+];
+
 // Mock fire location for ECC
 export function FireStatusProvider({ children }: { children: ReactNode }) {
-  const [fireLocations, setFireLocations] = useState<FireLocation[]>([
-    {
-      lat: 13.726849,
-      lng: 100.767144,
-      name: "Fire Detected",
-      severity: "non-fire",
-    },
-  ]);
+  const [fireLocations, setFireLocations] =
+    useState<FireLocation[]>(DEFAULT_STATUS);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Track previous severities to detect changes
   const previousSeveritiesRef = useRef<Record<string, "fire" | "non-fire">>({});
+
+  // Load status from JSON file on mount
+  useEffect(() => {
+    const loadStatusFromFile = async () => {
+      try {
+        const response = await fetch("/api/fire-status");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.fireLocations && Array.isArray(data.fireLocations)) {
+            setFireLocations(data.fireLocations);
+            // Initialize previous severities
+            data.fireLocations.forEach((location: FireLocation) => {
+              const locationId = generateLocationId(location.lat, location.lng);
+              previousSeveritiesRef.current[locationId] = severityToFireStatus(
+                location.severity
+              );
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading fire status from file:", error);
+        // Use default status if loading fails
+        setFireLocations(DEFAULT_STATUS);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+
+    loadStatusFromFile();
+  }, []);
+
+  // Save status to JSON file whenever it changes (after initial load)
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save on initial load
+
+    const saveStatusToFile = async () => {
+      try {
+        await fetch("/api/fire-status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ fireLocations }),
+        });
+      } catch (error) {
+        console.error("Error saving fire status to file:", error);
+      }
+    };
+
+    saveStatusToFile();
+  }, [fireLocations, isLoaded]);
 
   const getCurrentFireStatus = useCallback((): SafetyStatus => {
     return hasActiveFire(fireLocations) ? "alert" : "safe";
