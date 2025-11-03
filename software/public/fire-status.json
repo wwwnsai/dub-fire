@@ -2,7 +2,7 @@
   {
     "lat": 13.726849,
     "lng": 100.767144,
-    "name": "Fire Cleared",
-    "severity": "non-fire"
+    "name": "Fire Detected - Test Alert",
+    "severity": "high"
   }
 ]

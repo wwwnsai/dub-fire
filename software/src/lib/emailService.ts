@@ -41,7 +41,7 @@ if (process.env.SENDGRID_API_KEY) {
 async function deliverEmail(params: EmailParams): Promise<void> {
   const { to, subject, html } = params;
   const sanitizedHtml = sanitizeHtml(html);
-  // Prefer SendGrid if configured, fallback to Resend
+  
   if (process.env.SENDGRID_API_KEY) {
     await sgMail.send({
       to,
@@ -52,17 +52,17 @@ async function deliverEmail(params: EmailParams): Promise<void> {
     return;
   }
 
-  // Resend fallback
+  // // Resend fallback
 
-  if (resend) {
-    await resend.emails.send({
-      from: EMAIL_CONFIG.DEFAULT_FROM,
-      to: [to],
-      subject,
-      html: sanitizedHtml,
-    });
-    return;
-  }
+  // if (resend) {
+  //   await resend.emails.send({
+  //     from: EMAIL_CONFIG.DEFAULT_FROM,
+  //     to: [to],
+  //     subject,
+  //     html: sanitizedHtml,
+  //   });
+  //   return;
+  // }
 
   throw new Error(ERROR_MESSAGES.EMAIL_PROVIDER_NOT_CONFIGURED);
 }
