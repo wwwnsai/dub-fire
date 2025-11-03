@@ -41,6 +41,18 @@ if (process.env.SENDGRID_API_KEY) {
 async function deliverEmail(params: EmailParams): Promise<void> {
   const { to, subject, html } = params;
   const sanitizedHtml = sanitizeHtml(html);
+  // Prefer SendGrid if configured, fallback to Resend
+  if (process.env.SENDGRID_API_KEY) {
+    await sgMail.send({
+      to,
+      from: EMAIL_CONFIG.DEFAULT_FROM,
+      subject,
+      html: sanitizedHtml,
+    });
+    return;
+  }
+
+  // Resend fallback
 
   if (resend) {
     await resend.emails.send({
