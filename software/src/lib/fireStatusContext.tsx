@@ -34,8 +34,8 @@ const FireStatusContext = createContext<FireStatusContextType | undefined>(
 // Default fire location for ECC
 const DEFAULT_STATUS: FireLocation[] = [
   {
-    lat: 13.726849,
-    lng: 100.767144,
+    lat: 13.729418,
+    lng: 100.775325,
     name: "Fire Detected",
     severity: "non-fire",
   },

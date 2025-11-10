@@ -125,8 +125,8 @@ const Layout = ({ children }: LayoutProps) => {
         ) {
           // Default ECC location coordinates
           if (
-            Math.abs(location.lat - 13.726849) < 0.001 &&
-            Math.abs(location.lng - 100.767144) < 0.001
+            Math.abs(location.lat - 13.729528) < 0.001 &&
+            Math.abs(location.lng - 100.775371) < 0.001
           ) {
             locationName = "ECC-806";
           } else {

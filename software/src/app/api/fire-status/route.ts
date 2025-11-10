@@ -8,8 +8,8 @@ const STATUS_FILE_PATH = path.join(process.cwd(), "public", "fire-status.json");
 // Default fire location (ECC)
 const DEFAULT_STATUS: FireLocation[] = [
   {
-    lat: 13.726849,
-    lng: 100.767144,
+    lat: 13.7292,
+    lng: 100.7756,
     name: "Fire Detected",
     severity: "non-fire",
   },
