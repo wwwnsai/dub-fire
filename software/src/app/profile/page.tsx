@@ -1,10 +1,10 @@
 "use client"
 
-import Layout from "@/component/Layout"
+import Layout from "@/components/Layout"
 import Image from "next/image"
-import BackButton from "@/component/buttons/BackButton";
+import BackButton from "@/components/buttons/BackButton";
 import pfp from '@/photo/pfp.jpg'
-import InfoCards from "@/component/cards/InfoCards";
+import InfoCards from "@/components/cards/InfoCards";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User, RealtimeChannel } from "@supabase/supabase-js";

@@ -202,7 +202,9 @@ const Layout = ({ children }: LayoutProps) => {
       <main className="flex-1 pt-20 pb-14 px-4">{children}</main>
 
       {/* 🔹 Bottom Navbar */}
-      <BottomNav />
+      <div className="px-4 max-w-screen w-full mx-auto">
+        <BottomNav />
+      </div>
     </div>
   );
 };

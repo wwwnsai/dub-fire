@@ -1,6 +1,6 @@
 "use client";
 
-import Layout from '@/component/Layout'
+import Layout from '@/components/Layout'
 import React from 'react'
 
 export default function page() {

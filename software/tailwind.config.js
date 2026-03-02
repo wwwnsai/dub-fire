@@ -16,7 +16,8 @@ module.exports = {
         },
         secondary: {
           light: '#BB2234',
-          beige: '#FAE4CF'
+          beige: '#FAE4CF',
+          navy: '#0A0F23'
         },
         background: {
           light: '#FAF7F8',
@@ -28,6 +29,9 @@ module.exports = {
           secondary: '#5a5a5a',
           dark: '#ffffff',
         },
+        line: {
+          light: '#CAC7C9',
+        }
       },
     },
   },

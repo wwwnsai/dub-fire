@@ -1,6 +1,6 @@
 "use client";
 
-import Layout from "@/component/Layout";
+import Layout from "@/components/Layout";
 import React, { useState, useEffect } from "react";
 import { MapPin, Navigation, AlertCircle, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -14,7 +14,7 @@ import {
 } from "@/lib/utils";
 import { eventBus } from "@/lib/eventBus";
 
-const MapWithNoSSR = dynamic(() => import("@/component/LocationMap"), {
+const MapWithNoSSR = dynamic(() => import("@/components/LocationMap"), {
   ssr: false,
 });
 

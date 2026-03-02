@@ -4,7 +4,7 @@ import Image from 'next/image'
 
 import logoLight from '../../photo/logo-light.png'
 import logoDark from '../../photo/logo-dark.png'
-import BackButton from '@/component/buttons/BackButton';
+import BackButton from '@/components/buttons/BackButton';
 
 export default function LayoutAuth({
   children,
