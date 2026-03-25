@@ -9,10 +9,16 @@ import WebCamPhoto from "../../photo/web.png";
 import { useFireStatus } from "@/lib/fireStatusContext";
 import Card from "@/components/cards/Card";
 import StatusCard from "@/components/cards/StatusCard";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const { getCurrentFireStatus } = useFireStatus();
   const currentStatus = getCurrentFireStatus();
+  const [isSafe, setIsSafe] = useState(true);
+
+  // useEffect(() => {
+  //   setIsSafe(currentStatus === "safe");
+  // }, [currentStatus]);
 
   return (
     <Layout>
@@ -23,7 +29,7 @@ export default function Home() {
           </h1>
         </div>
         <StatusCard device="ECC-806" status={currentStatus} /> */}
-      <StatusCard isSafe={true} />
+      <StatusCard isSafe={isSafe} />
       </div>
 
       {/* <div className="">

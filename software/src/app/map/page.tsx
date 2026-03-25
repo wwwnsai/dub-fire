@@ -13,6 +13,7 @@ import {
   formatTimestamp,
 } from "@/lib/utils";
 import { eventBus } from "@/lib/eventBus";
+import Card from "@/components/cards/Card";
 
 const MapWithNoSSR = dynamic(() => import("@/components/LocationMap"), {
   ssr: false,
@@ -175,7 +176,7 @@ export default function MapPage() {
     <Layout>
       <div className="mt-2">
         {/* Header */}
-        <div className="flex justify-between mb-2">
+        {/* <div className="flex justify-between mb-2">
           <h1 className="sen-regular text-xl text-text-secondary">
             Your Location
           </h1>
@@ -194,7 +195,7 @@ export default function MapPage() {
               <Navigation className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* Loading State */}
         {isLoading && (
@@ -290,8 +291,35 @@ export default function MapPage() {
         {/* Location Display */}
         {userLocation && (
           <div className="space-y-4">
+            {/* Map Preview */}
+            <div className="mb-4 bg-white rounded-xl overflow-hidden relative shadow-[0px_4px_10px_0px_rgba(0,0,0,0.20)]">
+              <div className="aspect-video bg-gray-200 relative">
+                {userLocation && (
+                  <MapWithNoSSR
+                    latitude={userLocation.lat}
+                    longitude={userLocation.lng}
+                    fireLocations={fireLocations}
+                  />
+                )}
+              </div>
+              <div className="p-4">
+                {mapUrl && (
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-2 text-primary-light hover:text-orange-600 sen-medium"
+                  >
+                    <span>Open in Google Maps</span>
+                    <Navigation className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            
             {/* Location Card */}
-            <div className="bg-white rounded-lg p-6">
+            {/* <div className="bg-white rounded-lg p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-3 bg-orange-100 rounded-full">
                   <MapPin className="w-6 h-6 text-orange-500" />
@@ -324,38 +352,10 @@ export default function MapPage() {
                   </p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
-            {/* Map Preview */}
-            <div className="bg-white rounded-lg overflow-hidden">
-              <div className="aspect-video bg-gray-200 relative">
-                {userLocation && (
-                  <MapWithNoSSR
-                    latitude={userLocation.lat}
-                    longitude={userLocation.lng}
-                    fireLocations={fireLocations}
-                  />
-                )}
-              </div>
-              <div className="p-4">
-                <p className="sen-regular text-text-secondary text-sm mb-2">
-                  📍 You are here - {formatTimestamp(userLocation.timestamp)}
-                </p>
-                {mapUrl && (
-                  <a
-                    href={mapUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 text-primary-light hover:text-orange-600 sen-medium"
-                  >
-                    <span>Open in Google Maps</span>
-                    <Navigation className="w-4 h-4" />
-                  </a>
-                )}
-              </div>
-            </div>
 
-            {/* Fire Alert Status */}
+            {/* Fire Alert Status
             <div className="bg-white rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <AlertCircle
@@ -392,9 +392,22 @@ export default function MapPage() {
                   </p>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         )}
+
+        <Card 
+          infoData={[
+            { title: "Latitude", description: userLocation?.lat.toFixed(6) || "N/A", editable: false },
+            { title: "Longitude", description: userLocation?.lng.toFixed(6) || "N/A", editable: false },
+          ]}
+        />
+
+        <Card
+          infoData={[
+            { title: "Last Updated", description: userLocation ? formatTimestamp(userLocation.timestamp) : "N/A", editable: false }
+          ]}
+        />
 
       </div>
     </Layout>

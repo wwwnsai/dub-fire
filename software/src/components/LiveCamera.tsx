@@ -8,7 +8,7 @@ interface LiveCameraProps {
 const LiveCamera: FC<LiveCameraProps> = ({ src }) => {
   return (
     <div className="mt-6">
-      <p className="text-gray-700 mb-2 font-semibold">Live Camera</p>
+      {/* <p className="text-gray-700 mb-2 font-semibold">Live Camera</p> */}
       <div className="rounded-lg overflow-hidden shadow">
         <img src={src} alt="Live camera" className="w-full h-auto" />
       </div>

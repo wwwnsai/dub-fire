@@ -8,17 +8,12 @@ export default function Page() {
   return (
     <Layout>
       <div className="mt-2">
-        <div className="mb-2">
-          <h1 className="sen-regular text-xl text-text-secondary">
-            Live Camera
-          </h1>
-        </div>
         <Image
           src={WebCamPhoto}
           alt="Live camera feed"
           width={640}
           height={640}
-          className="rounded-lg shadow"
+          className="rounded-lg shadow-[0px_4px_10px_0px_rgba(0,0,0,0.25)]"
         />
       </div>
     </Layout>

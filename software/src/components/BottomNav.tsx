@@ -18,7 +18,11 @@ const BottomNav = () => {
 
   return (
     <nav 
-      className="h-20 w-full relative bottom-5 justify-center items-center bg-white/70 flex shadow-[0px_4px_20px_0px_rgba(0,0,0,0.20)] backdrop-blur-[2px] rounded-[20px]"
+      className="
+        fixed bottom-5 left-4 right-4
+        h-20 
+        flex justify-center items-center 
+        bg-white/70 shadow-[0px_4px_20px_0px_rgba(0,0,0,0.20)] backdrop-blur-[2px] rounded-[20px]"
     >
       {/* Home */}
       <div className="w-1/4">

@@ -18,17 +18,21 @@ export default function LayoutAuth({
             className='flex justify-start'
             onClick={() => window.location.href = '/home'}
         >
-            <BackButton color={theme === 'light' ? 'red' : 'white'} />
-            <p className='ml-2 sen-regular text-xs text-secondary-light'>go to home</p>
+            <BackButton 
+              color={theme === 'light' ? 'red' : 'white'} 
+              className='flex justify-start'
+              onClick={() => window.location.href = '/home'}
+            />
+            {/* <p className='ml-2 sen-regular text-xs text-secondary-light'>go to home</p> */}
         </button>
         <div className='flex justify-center items-center mx-auto my-2 w-20 h-20'>
-            {theme === 'light' ? (
+            {/* {theme === 'light' ? (
               <Image src={logoLight} alt="Logo Light" />
             ) : (
               <Image src={logoDark} alt="Logo Dark" />
-            )}
+            )} */}
         </div>
-        <div className='mt-10'>
+        <div className='mt-4'>
             {children}
         </div>
     </div>

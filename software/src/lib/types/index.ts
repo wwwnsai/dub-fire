@@ -61,3 +61,9 @@ export interface StatusChangeParams {
   coordinates?: { lat: number; lng: number };
   location?: string;
 }
+
+export interface InfoItem { 
+  title: string; 
+  description: string, 
+  editable?: boolean 
+}

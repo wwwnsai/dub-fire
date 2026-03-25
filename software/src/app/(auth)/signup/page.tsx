@@ -46,19 +46,24 @@ export default function SignupPage() {
 
   return (
     <div className="h-full">
-      <p className="text-text-primary sen-medium text-lg mb-4">Create your account</p>
+      {/* Signup Header */}
+      <div className="w-44 justify-center text-navy text-2xl sen-medium mb-8">
+        Create <br/>Your Account
+      </div>
+
+      {/* Signup Form */}
       <div className="flex flex-col items-center justify-center">
         <form onSubmit={handleSignup} className="flex flex-col gap-4 w-full">
           <input
             type="email"
             placeholder="email@email.com"
-            className="py-4 px-4 rounded-xl bg-white text-md"
+            className="py-4 border-b border-text-secondary bg-background-light sen-regular"
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
             type="password"
             placeholder="password"
-            className="py-4 px-4 rounded-xl bg-white text-md"
+            className="py-4 border-b border-text-secondary bg-background-light sen-regular"
             onChange={(e) => {
               setPassword(e.target.value);
               if (!checkPasswordMatch(e.target.value, confirmPassword)) {
@@ -71,7 +76,7 @@ export default function SignupPage() {
           <input
             type="password"
             placeholder="confirm password"
-            className="py-4 px-4 rounded-xl bg-white text-md"
+            className="py-4 border-b border-text-secondary bg-background-light sen-regular"
             onChange={(e) => {
               setConfirmPassword(e.target.value);
               if (!checkPasswordMatch(password, e.target.value)) {
@@ -81,28 +86,27 @@ export default function SignupPage() {
               }
             }}
           />
+          {!error && <div className="h-4"></div>}
+          {error && <p className="text-secondary-light text-sm h-4">{error}</p>}
           <button
             type="submit"
-            className="bg-primary-light text-white text-md sen-bold rounded-xl py-4 hover:bg-secondary-light transition"
+            className="mb-4 bg-primary-light text-white text-md sen-bold rounded-[100px] py-4 hover:bg-secondary-light transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
           >
             Sign up
           </button>
-          {!error && <div className="h-5"></div>}
-          {error && <p className="text-secondary-light text-sm">{error}</p>}
         </form>
-        <div className="flex flex-col items-center fixed left-0 right-0 bottom-16 z-30 mx-8">
-          <p className="text-text-secondary sen-regular text-sm">
-            - or sign up with -
-          </p>
-          <div className="flex justify-center items-center w-full mt-4 mb-8 gap-4">
+        <div className="flex flex-col items-center w-full mt-2">
+          <div className="flex justify-center items-center w-full gap-4">
             <button
-              className="w-full bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
+              className="w-full bg-white p-4 rounded-[100px] flex items-center justify-center gap-4 hover:shadow-lg transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
               onClick={async () => handleOAuthSignup("google")}
+              // disabled={loading}
             >
               <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
+              <span className="text-sm sen-regular text-text-secondary">Continue with Google</span>
             </button>
           </div>
-          <div className="flex items-end mt-8">
+          <div className="flex justify-center items-center mt-8 fixed left-0 right-0 bottom-16 z-30 mx-8">
             <p className="mt-auto text-text-secondary sen-regular text-sm">
               Already have an account?{" "}
               <span
