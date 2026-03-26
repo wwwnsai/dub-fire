@@ -13,7 +13,7 @@ export default function LayoutAuth({
 }>) {
     const theme = 'light'
   return (
-    <div className='h-screen flex flex-col mx-8 my-12'>
+    <div className='h-screen flex flex-col mx-8 my-12 md:my-8'>
         <button 
             className='flex justify-start'
             onClick={() => window.location.href = '/home'}
@@ -25,15 +25,8 @@ export default function LayoutAuth({
             />
             {/* <p className='ml-2 sen-regular text-xs text-secondary-light'>go to home</p> */}
         </button>
-        <div className='flex justify-center items-center mx-auto my-2 w-20 h-20'>
-            {/* {theme === 'light' ? (
-              <Image src={logoLight} alt="Logo Light" />
-            ) : (
-              <Image src={logoDark} alt="Logo Dark" />
-            )} */}
-        </div>
-        <div className='mt-4'>
-            {children}
+        <div className='mt-4 h-3/4 flex flex-col'>
+          {children}
         </div>
     </div>
   )

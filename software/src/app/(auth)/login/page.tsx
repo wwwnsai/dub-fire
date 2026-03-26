@@ -47,71 +47,77 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-full">
-      {/* Login Header */}
-      <div className="w-44 justify-center text-navy text-2xl sen-medium mb-8">
-        Log into <br/>your account
-      </div>
+    <div className="w-full h-full flex flex-col md:flex-row items-center justify-center">
+      <div className="w-full h-full flex flex-col md:flex-row items-center justify-center">
+        {/* Login Header */}
+        <div className="w-full justify-center text-navy text-2xl sen-medium mb-8
+          md:w-1/2 md:flex md:text-5xl md:items-center md:justify-start
+        ">
+          Log into <br/>your account
+        </div>
 
-      {/* Login Form */}
-      <div className="flex flex-col items-center justify-center">
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
-          <input
-            type="email"
-            placeholder="email@email.com"
-            className="py-4 border-b border-text-secondary bg-background-light sen-regular"
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="password"
-            className="py-4 border-b border-text-secondary bg-background-light sen-regular"
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {!error && <div className="h-4"></div>} 
-          {error && <p className="text-red-500 text-sm h-4">{error}</p>}
-          <button
-            type="submit"
-            className="mb-4 bg-primary-light text-white text-md sen-bold rounded-[100px] py-4 hover:bg-secondary-light transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
-          >
-            {loading ? "Logging in..." : "Log In"}
-          </button>
-        </form>
-        <div className="flex flex-col items-center w-full mt-2">
-          <div className="flex justify-center items-center w-full gap-4">
+        {/* Login Form */}
+        <div className="w-full flex flex-col items-center justify-center
+          md:w-1/2 md:h-full
+        ">
+          <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full lg:gap-6">
+            <input
+              type="email"
+              placeholder="email@email.com"
+              className="py-4 border-b border-text-secondary bg-background-light sen-regular"
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              type="password"
+              placeholder="password"
+              className="py-4 border-b border-text-secondary bg-background-light sen-regular"
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {!error && <div className="h-4"></div>} 
+            {error && <p className="text-red-500 text-sm h-4">{error}</p>}
             <button
-              className="w-full bg-white p-4 rounded-[100px] flex items-center justify-center gap-4 hover:shadow-lg transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
-              onClick={async () => handleOAuthLogin("google")}
-              disabled={loading}
+              type="submit"
+              className="lg:mb-6 mb-4 bg-primary-light text-white text-md sen-bold rounded-[100px] py-4 hover:bg-secondary-light transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
             >
-              <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
-              <span className="text-sm sen-regular text-text-secondary">Continue with Google</span>
+              {loading ? "Logging in..." : "Log In"}
             </button>
-            {/* <button
-              className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => handleOAuthLogin("facebook")}
-            >
-              <Image src={facebookLogo} alt="Facebook Logo" width={20} height={20} />
-            </button>
-            <button
-              className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
-              onClick={async () => handleOAuthLogin("apple")}
-            >
-              <Image src={appleLogo} alt="Apple Logo" width={20} height={20} />
-            </button> */}
-          </div>
-          <div className="flex justify-center items-center mt-8 fixed left-0 right-0 bottom-16 z-30 mx-8">
-            <p className="mt-auto text-text-secondary sen-regular text-sm">
-              Don't have an account?{" "}
-              <span
-                className="text-secondary-light sen-semibold text-sm cursor-pointer hover:underline"
-                onClick={() => router.push("/signup")}
+          </form>
+          <div className="flex flex-col items-center w-full mt-2">
+            <div className="flex justify-center items-center w-full gap-4">
+              <button
+                className="w-full bg-white p-4 rounded-[100px] flex items-center justify-center gap-4 hover:shadow-lg transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
+                onClick={async () => handleOAuthLogin("google")}
+                disabled={loading}
               >
-                Sign up
-              </span>
-            </p>
+                <Image src={googleLogo} alt="Google Logo" width={20} height={20} />
+                <span className="text-sm sen-regular text-text-secondary">Continue with Google</span>
+              </button>
+              {/* <button
+                className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
+                onClick={async () => handleOAuthLogin("facebook")}
+              >
+                <Image src={facebookLogo} alt="Facebook Logo" width={20} height={20} />
+              </button>
+              <button
+                className="w-1/3 bg-white p-4 rounded-xl flex items-center justify-center gap-4 hover:shadow-lg transition"
+                onClick={async () => handleOAuthLogin("apple")}
+              >
+                <Image src={appleLogo} alt="Apple Logo" width={20} height={20} />
+              </button> */}
+            </div>
           </div>
         </div>
+      </div>
+      <div className="flex justify-center items-center mt-8 fixed left-0 right-0 bottom-16 z-30 mx-8">
+        <p className="mt-auto text-text-secondary sen-regular text-sm">
+          Don't have an account?{" "}
+          <span
+            className="text-secondary-light sen-semibold text-sm cursor-pointer hover:underline"
+            onClick={() => router.push("/signup")}
+          >
+            Sign up
+          </span>
+        </p>
       </div>
     </div>
   );

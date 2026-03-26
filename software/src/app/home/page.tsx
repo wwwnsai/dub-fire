@@ -20,6 +20,25 @@ export default function Home() {
   //   setIsSafe(currentStatus === "safe");
   // }, [currentStatus]);
 
+
+  async function fireAlertTest() {
+    await fetch("/api/line-noti", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: "🔥 Fire Alert!!" }),
+    });
+
+    await fetch("/api/line-group", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: "🔥 ไฟไหม้จ้า" }),
+    });
+  }
+
   return (
     <Layout>
       <div className="">
@@ -59,7 +78,12 @@ export default function Home() {
         ]}
         switchFunc={() => console.log("Switch toggled")}
       />
-
+      <button
+        className="px-4 bg-primary-light text-white text-md sen-bold rounded-[100px] py-4 hover:bg-secondary-light transition shadow-[0px_4px_5px_0px_rgba(0,0,0,0.10)]"
+        onClick={() => fireAlertTest()}
+      >
+        Send LINE
+      </button>
 
     </Layout>
   );
