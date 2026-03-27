@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^20",

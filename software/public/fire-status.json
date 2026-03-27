@@ -1,8 +1,8 @@
 [
   {
-    "lat": 13.7292,
-    "lng": 100.7756,
-    "name": "Fire Detected - Test Alert",
-    "severity": "high"
+    "lat": 13,
+    "lng": 100,
+    "name": "Test API Fire Location",
+    "severity": "fire"
   }
 ]
