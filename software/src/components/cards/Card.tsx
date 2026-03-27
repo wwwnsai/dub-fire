@@ -6,24 +6,23 @@ import RemoveTextButton from "../buttons/RemoveTextButton";
 
 export default function Card({
   infoData,
-  switchFunc
+  switchFunc,
+  onChangeText
 }: {
   infoData?: InfoItem[];
   switchFunc?: () => void;
+  onChangeText?: (values: string[]) => void;
 }) {
 
     const infoLength = infoData ? infoData.length : 0;
-    const editable = infoData ? infoData.some(item => item.editable) : false;
 
     const [infoDescriptions, setInfoDescriptions] = useState<string[]>(infoData ? infoData.map(item => item.description) : []);
 
     useEffect(() => {
-        if (infoData) {
+        if (infoData && infoDescriptions.length === 0) {
             setInfoDescriptions(infoData.map(item => item.description));
         }
     }, [infoData]);
-
-    // console.log("Info:", infoLength, infoData);
 
     return (
         <div className="w-full h-auto my-8 py-5 px-6 relative rounded-[10px] bg-white shadow-[0px_4px_10px_0px_rgba(0,0,0,0.20)]">
@@ -40,6 +39,8 @@ export default function Card({
                                 const newDescriptions = [...infoDescriptions];
                                 newDescriptions[0] = e.target.value;
                                 setInfoDescriptions(newDescriptions);
+
+                                onChangeText?.(newDescriptions);
                             }}
                         />
                     </div>
@@ -68,8 +69,10 @@ export default function Card({
                                     value={infoDescriptions[index]}
                                     onChange={(e) => {
                                         const newDescriptions = [...infoDescriptions];
-                                        newDescriptions[0] = e.target.value;
+                                        newDescriptions[index] = e.target.value;
                                         setInfoDescriptions(newDescriptions);
+
+                                        onChangeText?.(newDescriptions);
                                     }}
                                 />
                                 <RemoveTextButton 
