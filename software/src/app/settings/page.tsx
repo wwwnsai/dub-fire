@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Profile } from "@/lib/types/users";
 import pfp from '@/photo/pfp.jpg'
 import Card from '@/components/cards/Card';
+import ButtonCard from '@/components/cards/ButtonCard';
 
 export default function page() {
     const router = useRouter();
@@ -17,7 +18,9 @@ export default function page() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const [emailNotifications, setEmailNotifications] = useState(false);
+    const [toggleNotifications, setToggleNotifications] = useState(false);
+
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     // fetching data and setting up listeners
     useEffect(() => {
@@ -35,6 +38,7 @@ export default function page() {
             if (session) {
                 const currentUser = session.user;
                 setUser(currentUser);
+                setIsLoggedIn(true);
 
                 const { data: profileData, error: profileError } = await supabase
                     .from("profiles")
@@ -68,7 +72,8 @@ export default function page() {
 
             } else {
                 setLoading(false);
-                router.push("/login");
+                setIsLoggedIn(false);
+                // router.push("/login");
             }
         };
 
@@ -80,10 +85,15 @@ export default function page() {
                 if (event === "SIGNED_OUT") {
                     setProfile(null);
                     setUser(null);
-                    router.push("/login");
+                    setIsLoggedIn(false);
                     if (profileChannel) {
                         supabase.removeChannel(profileChannel);
                     }
+                }
+
+                if (event === "SIGNED_IN" && session) {
+                    setUser(session.user);
+                    setIsLoggedIn(true);
                 }
             }
         );
@@ -99,16 +109,16 @@ export default function page() {
     // Sync email notification state with profile data
     useEffect(() => {
         if (profile) {
-            setEmailNotifications(profile.email_noti);
+            setToggleNotifications(profile.email_noti);
         }
     }, [profile]);
 
     async function handleSwitchToggle() {
         if (!user) return; 
 
-        const newStatus = !emailNotifications;
+        const newStatus = !toggleNotifications;
 
-        setEmailNotifications(newStatus);
+        setToggleNotifications(newStatus);
 
         // --- DATABASE UPDATE ---
         const [profileUpdate, subscriptionUpdate] = await Promise.all([
@@ -125,12 +135,12 @@ export default function page() {
         
         if (profileUpdate.error) {
             console.error("Error updating profile:", profileUpdate.error.message);
-            setEmailNotifications(!newStatus); 
+            setToggleNotifications(!newStatus); 
         }
 
         if (subscriptionUpdate.error) {
             console.error("Error updating subscription:", subscriptionUpdate.error.message);
-            setEmailNotifications(!newStatus); 
+            setToggleNotifications(!newStatus); 
         }
     }
 
@@ -156,7 +166,7 @@ export default function page() {
         {
             "1": {
                 title: "Email Notification",
-                description: emailNotifications ? "On" : "Off"
+                description: toggleNotifications ? "On" : "Off"
             }
         },
         {
@@ -166,43 +176,56 @@ export default function page() {
   return (
     <Layout>
       <div className="mt-2">
-        {/* <div className="mb-2">
-          <h1 className="sen-regular text-xl text-text-secondary">
-            Settings
-          </h1>
-        </div> */}
-        <div className="flex justify-center">
-
-          {/* Profile picture */}
-          <div className="relative w-32 h-32">
-            <div className="w-32 h-32 relative rounded-full overflow-hidden bg-background rounded-full shadow-[0px_4px_10px_rgba(0,0,0,0.25)]">
-              <Image
-                  src={profile?.avatar_url || pfp}
-                  alt="User Profile Picture"
-                  fill
-                  className="object-cover"
-                  sizes="7rem"
-              />
+        {/* Profile picture */}
+        {isLoggedIn &&
+            <div className="flex justify-center">
+                <div className="relative w-32 h-32">
+                    <div className="w-32 h-32 relative rounded-full overflow-hidden bg-background rounded-full shadow-[0px_4px_10px_rgba(0,0,0,0.25)]">
+                    <Image
+                        src={profile?.avatar_url || pfp}
+                        alt="User Profile Picture"
+                        fill
+                        className="object-cover"
+                        sizes="7rem"
+                    />
+                    </div>
+                    <EditIcon />
+                </div>
             </div>
-            <EditIcon />
-          </div>
-        </div>
-        <div className='mt-4'>
+        }
+        <div className={`${isLoggedIn ? 'mt-4 mb-12' : ''}`}>
+            {isLoggedIn ? (
+                <>
+                    <Card infoData={[
+                            { title: "Username", description: loading ? "Loading..." : profile?.username || "No Username", editable: true },
+                            { title: "Email", description: loading ? "Loading..." : user?.email || "No Email", editable: true },
+                        ]}
+                        switchFunc={() => console.log("Switch toggled")}
+                    />
 
-          <Card infoData={[
-              { title: "Username", description: loading ? "Loading..." : profile?.username || "No Username", editable: true },
-              { title: "Email", description: loading ? "Loading..." : user?.email || "No Email", editable: true },
-            ]}
-            switchFunc={() => console.log("Switch toggled")}
-          />
+                    <Card infoData={[
+                            { title: "Old Password", description: "", editable: true },
+                            { title: "New Password", description: "", editable: true},
+                            { title: "Confirm Password", description: "", editable: true }
+                        ]}
+                        switchFunc={() => console.log("Switch toggled")}
+                    />
 
-          <Card infoData={[
-            { title: "Old Password", description: "", editable: true },
-            { title: "New Password", description: "", editable: true},
-            { title: "Confirm Password", description: "", editable: true }
-          ]}
-            switchFunc={() => console.log("Switch toggled")}
-          />
+                    <Card infoData={[
+                            { title: "Email Notification", description: toggleNotifications ? "On" : "Off", editable: false }
+                        ]}
+                        switchFunc={handleSwitchToggle}
+                    />
+
+                    <ButtonCard title='Save' triggerFunc={() => console.log("Save button clicked")} color='text-text-green' />
+
+                    <ButtonCard title="Logout" triggerFunc={() => supabase.auth.signOut()} color='text-secondary-light' />
+                </>
+
+            ) : (
+
+                <ButtonCard title="Login" triggerFunc={() => router.push("/login")} color='text-secondary-light' />
+            )}
           
         </div>
       </div>

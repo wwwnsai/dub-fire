@@ -166,14 +166,14 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-background-light">
       {/* Top Navbar */}
-      <header className="flex fixed top-0 left-0 right-0 bg-background-light z-50">
+      <header className="flex fixed top-0 left-0 right-0 bg-transparent z-50">
         <button
           className={`w-3/4 flex justify-start items-center px-4 pt-6 pb-4`}
-          onClick={() =>
-            profile ? router.push("/profile") : router.push("/login")
-          }
+          // onClick={() =>
+          //   profile ? router.push("/profile") : router.push("/login")
+          // }
         >
-          {profile && (
+          {/* {profile && (
             <div className="w-8 h-8 relative rounded-full overflow-hidden">
               <Image
                 src={profile?.avatar_url || pfp}
@@ -191,17 +191,17 @@ const Layout = ({ children }: LayoutProps) => {
             } text-md `}
           >
             {profile ? profile.username ?? profile.email : "Log In"}
-          </span>
+          </span> */}
         </button>
         <div className="w-1/4 flex justify-end items-center pr-6 pt-6 pb-4">
           <NotificationBadge notifications={notifications} />
         </div>
       </header>
 
-      {/* 🔹 Main Content (pushed down from top + up from bottom) */}
+      {/* Main */}
       <main className="flex-1 pt-20 pb-14 px-4">{children}</main>
 
-      {/* 🔹 Bottom Navbar */}
+      {/* Bottom Navbar */}
       <div className="px-4 max-w-screen w-full mx-auto">
         <BottomNav />
       </div>

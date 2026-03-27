@@ -14,7 +14,7 @@ export default function LayoutAuth({
     const theme = 'light'
   return (
     <div className='h-screen flex flex-col mx-8 my-12 md:my-8'>
-        <button 
+        <div 
             className='flex justify-start'
             onClick={() => window.location.href = '/home'}
         >
@@ -24,7 +24,7 @@ export default function LayoutAuth({
               onClick={() => window.location.href = '/home'}
             />
             {/* <p className='ml-2 sen-regular text-xs text-secondary-light'>go to home</p> */}
-        </button>
+        </div>
         <div className='mt-4 h-3/4 flex flex-col'>
           {children}
         </div>
