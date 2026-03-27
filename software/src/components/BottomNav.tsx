@@ -10,7 +10,7 @@ import MapIcon from "./icons/MapIcon";
 
 const BottomNav = () => {
   const pathname = usePathname();
-
+// test
   const linkClass = (path: string) =>
     `flex flex-col items-center transition-colors duration-300 ease-in-out ${
       pathname === path ? "text-blue-500" : "text-gray-600"
