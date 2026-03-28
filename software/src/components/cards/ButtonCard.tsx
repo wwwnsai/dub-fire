@@ -1,6 +1,4 @@
 
-import { InfoItem } from "../../lib/types";
-
 export default function ButtonCard({
     title,
     triggerFunc,

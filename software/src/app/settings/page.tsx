@@ -3,7 +3,7 @@
 import EditIcon from '@/components/icons/EditIcon';
 import Layout from '@/components/Layout'
 import Image from "next/image"
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User, RealtimeChannel } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { Profile } from "@/lib/types/users";
 import pfp from '@/photo/pfp.jpg'
 import Card from '@/components/cards/Card';
 import ButtonCard from '@/components/cards/ButtonCard';
+import LineAddFriendButton from '@/components/buttons/LineAddFriendButton';
 
 export default function page() {
     const router = useRouter();
@@ -18,8 +19,6 @@ export default function page() {
     const isOAuthUser = user?.app_metadata?.provider && user.app_metadata.provider !== "email";
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
-
-    const [toggleNotifications, setToggleNotifications] = useState(false);
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -30,129 +29,48 @@ export default function page() {
         confirmPassword: ""
     });
 
-    // fetching data and setting up listeners
+    // fetching user
     useEffect(() => {
-        let profileChannel: RealtimeChannel | null = null;
+        const fetchData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
 
-        const fetchDataAndSubscribe = async () => {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (session) {
+            setUser(session.user);
+            setIsLoggedIn(true);
 
-            if (sessionError) {
-                console.error("Error getting session:", sessionError.message);
-                setLoading(false);
-                return;
-            }
+            const { data } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
 
-            if (session) {
-                const currentUser = session.user;
-                setUser(currentUser);
-                setIsLoggedIn(true);
+            setProfile(data);
+        }
 
-                const { data: profileData, error: profileError } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("id", currentUser.id)
-                    .maybeSingle();
-
-                if (profileError) {
-                    console.error("Profile Error:", profileError.message);
-                } else {
-                    setProfile(profileData);
-                }
-                setLoading(false);
-
-                profileChannel = supabase
-                    .channel(`profile-${currentUser.id}`)
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: 'UPDATE',
-                            schema: 'public',
-                            table: 'profiles',
-                            filter: `id=eq.${currentUser.id}`
-                        },
-                        (payload) => {
-                            console.log('Profile change received!', payload);
-                            setProfile(payload.new as Profile);
-                        }
-                    )
-                    .subscribe();
-
-            } else {
-                setLoading(false);
-                setIsLoggedIn(false);
-                // router.push("/login");
-            }
+        setLoading(false);
         };
 
-        fetchDataAndSubscribe();
+        fetchData();
+    }, []);
 
-        // Auth listener
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-            (event, session) => {
-                if (event === "SIGNED_OUT") {
-                    setProfile(null);
-                    setUser(null);
-                    setIsLoggedIn(false);
-                    if (profileChannel) {
-                        supabase.removeChannel(profileChannel);
-                    }
-                }
-
-                if (event === "SIGNED_IN" && session) {
-                    setUser(session.user);
-                    setIsLoggedIn(true);
-                }
-            }
-        );
-
-        return () => {
-            authListener.subscription.unsubscribe();
-            if (profileChannel) {
-                supabase.removeChannel(profileChannel);
-            }
-        };
-    }, [router]);
-
-    // Sync email notification state with profile data
     useEffect(() => {
         if (profile) {
-            setToggleNotifications(profile.email_noti);
+        setEditedUsername(profile.username || "");
         }
     }, [profile]);
 
-
-    // Handle Noti Toggle
-    async function handleSwitchToggle() {
-        if (!user) return; 
-
-        const newStatus = !toggleNotifications;
-
-        setToggleNotifications(newStatus);
-
-        // DATABASE UPDATE
-        const [profileUpdate, subscriptionUpdate] = await Promise.all([
-            supabase
-                .from("profiles")
-                .update({ email_noti: newStatus })
-                .eq("id", user.id),
-            
-            supabase
-                .from("profiles")
-                .update({ is_active: newStatus })
-                .eq("id", user.id)
-        ]);
-        
-        if (profileUpdate.error) {
-            console.error("Error updating profile:", profileUpdate.error.message);
-            setToggleNotifications(!newStatus); 
+    const profileInfo = useMemo(() => [
+        {
+            title: "Username",
+            description: loading ? "" : profile?.username || "No Username",
+            editable: true
+        },
+        {
+            title: "Email",
+            description: loading ? "" : user?.email || "No Email",
+            editable: false
         }
-
-        if (subscriptionUpdate.error) {
-            console.error("Error updating subscription:", subscriptionUpdate.error.message);
-            setToggleNotifications(!newStatus); 
-        }
-    }
+    ], [loading, profile, user]);
 
     // Handle Save Button
     async function handleSaveChanges() {
@@ -160,80 +78,76 @@ export default function page() {
 
         console.log("editedUsername:", editedUsername);
         console.log("username changed?", editedUsername !== profile.username);
+        
         // Update Username
-        if (
-            editedUsername &&
-            editedUsername !== profile.username
-        ) {
+        if (editedUsername && editedUsername !== profile.username) {
             const { error } = await supabase
                 .from("profiles")
                 .update({ username: editedUsername })
                 .eq("id", user.id);
 
+            // Update Password (only for email users)
+            if (!isOAuthUser) {
+                const { oldPassword, newPassword, confirmPassword } = editedPassword;
+
+                // Only run if user typed something
+                if (oldPassword || newPassword || confirmPassword) {
+
+                    // Validation
+                    if (!oldPassword || !newPassword || !confirmPassword) {
+                        alert("Please fill all password fields");
+                        return;
+                    }
+
+                    if (newPassword !== confirmPassword) {
+                        alert("New password and confirm password do not match");
+                        return;
+                    }
+
+                    if (newPassword.length < 6) {
+                        alert("Password must be at least 6 characters");
+                        return;
+                    }
+
+                    // Re-authenticate (IMPORTANT)
+                    const { error: reAuthError } =
+                        await supabase.auth.signInWithPassword({
+                            email: user.email!,
+                            password: oldPassword,
+                        });
+
+                    if (reAuthError) {
+                        alert("Old password is incorrect");
+                        return;
+                    }
+
+                    // Update password
+                    const { error: updateError } =
+                        await supabase.auth.updateUser({
+                            password: newPassword,
+                        });
+
+                    if (updateError) {
+                        console.error("Password update error:", updateError.message);
+                    } else {
+                        console.log("Password updated");
+
+                        // Reset fields after success
+                        setEditedPassword({
+                            oldPassword: "",
+                            newPassword: "",
+                            confirmPassword: "",
+                        });
+                    }
+                }
+            }
+            
             if (error) {
-                console.error("✅ Update username error:", error.message);
+                console.error("Update error:", error.message);
             } else {
                 console.log("✅ Username updated");
             }
         }
-
-        // Update Password (only for email users)
-        if (!isOAuthUser) {
-            const { oldPassword, newPassword, confirmPassword } = editedPassword;
-
-            // Only run if user typed something
-            if (oldPassword || newPassword || confirmPassword) {
-
-                // Validation
-                if (!oldPassword || !newPassword || !confirmPassword) {
-                    alert("Please fill all password fields");
-                    return;
-                }
-
-                if (newPassword !== confirmPassword) {
-                    alert("New password and confirm password do not match");
-                    return;
-                }
-
-                if (newPassword.length < 6) {
-                    alert("Password must be at least 6 characters");
-                    return;
-                }
-
-                // Re-authenticate (IMPORTANT)
-                const { error: reAuthError } =
-                    await supabase.auth.signInWithPassword({
-                        email: user.email!,
-                        password: oldPassword,
-                    });
-
-                if (reAuthError) {
-                    alert("Old password is incorrect");
-                    return;
-                }
-
-                // Update password
-                const { error: updateError } =
-                    await supabase.auth.updateUser({
-                        password: newPassword,
-                    });
-
-                if (updateError) {
-                    console.error("Password update error:", updateError.message);
-                } else {
-                    console.log("Password updated");
-
-                    // Reset fields after success
-                    setEditedPassword({
-                        oldPassword: "",
-                        newPassword: "",
-                        confirmPassword: "",
-                    });
-                }
-            }
-        }
-
-        console.log("✅ Save complete");
     }
 
     useEffect(() => {
@@ -265,10 +179,7 @@ export default function page() {
         <div className={`${isLoggedIn ? 'mt-4 mb-12' : ''}`}>
             {isLoggedIn ? (
                 <>
-                    <Card infoData={[
-                            { title: "Username", description: loading ? "Loading..." : profile?.username || "No Username", editable: true },
-                            { title: "Email", description: loading ? "Loading..." : user?.email || "No Email", editable: false },
-                        ]}
+                    <Card infoData={profileInfo}
                         onChangeText={(values) => {
                             setEditedUsername(values[0]);
                         }}
@@ -290,11 +201,13 @@ export default function page() {
                         />
                     )}
 
-                    <Card infoData={[
+                    {/* <Card infoData={[
                             { title: "Email Notification", description: toggleNotifications ? "On" : "Off", editable: false }
                         ]}
                         switchFunc={handleSwitchToggle}
-                    />
+                    /> */}
+
+                    <LineAddFriendButton />
 
                     <ButtonCard title='Save' triggerFunc={() => handleSaveChanges()} color='text-text-green' />
 
@@ -303,7 +216,10 @@ export default function page() {
 
             ) : (
 
-                <ButtonCard title="Login" triggerFunc={() => router.push("/login")} color='text-secondary-light' />
+                <div>
+                    <LineAddFriendButton />
+                    <ButtonCard title="Login" triggerFunc={() => router.push("/login")} color='text-secondary-light' />
+                </div>
             )}
           
         </div>
