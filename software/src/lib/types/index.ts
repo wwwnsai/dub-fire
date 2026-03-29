@@ -67,3 +67,12 @@ export interface InfoItem {
   description: string, 
   editable?: boolean 
 }
+
+export interface SensorSnapshot {
+  temperatureC: number | null;
+  humidity: number | null;
+  imuPitch: number | null;
+  imuRoll: number | null;
+  updatedAt: string | null;
+  source?: string;
+}

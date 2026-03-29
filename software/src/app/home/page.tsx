@@ -1,18 +1,27 @@
 "use client";
 
-import Image from "next/image";
 import Layout from "@/components/Layout";
 import { useFireStatus } from "@/lib/fireStatusContext";
 import Card from "@/components/cards/Card";
 import StatusCard from "@/components/cards/StatusCard";
 import { useEffect, useState } from "react";
-import { sendFireAlert, sendSafeAlert } from "@/lib/lineNotiService";
+import type { SensorSnapshot } from "@/lib/types";
 import { eventBus } from "@/lib/eventBus";
+
+const EMPTY_SENSOR_STATUS: SensorSnapshot = {
+  temperatureC: null,
+  humidity: null,
+  imuPitch: null,
+  imuRoll: null,
+  updatedAt: null,
+  source: "uninitialized",
+};
 
 export default function Home() {
   const { getCurrentFireStatus } = useFireStatus();
   const currentStatus = getCurrentFireStatus();
   const [isSafe, setIsSafe] = useState(currentStatus === "safe");
+  const [sensorStatus, setSensorStatus] = useState<SensorSnapshot>(EMPTY_SENSOR_STATUS);
 
   function handleToggleStatus() {
     setIsSafe((prev) => !prev);
@@ -20,10 +29,10 @@ export default function Home() {
     const fromStatus = isSafe ? "non-fire" : "fire";
     const toStatus = isSafe ? "fire" : "non-fire";
 
-    console.log("🔥 emitting event:", { fromStatus, toStatus });
+    console.log("Emitting event:", { fromStatus, toStatus });
 
     eventBus.emit("fire:status-changed", {
-      locationId: "manual-test", 
+      locationId: "manual-test",
       fromStatus,
       toStatus,
       location: {
@@ -43,16 +52,12 @@ export default function Home() {
     const handleStatusChange = async (event: any) => {
       const { fromStatus, toStatus } = event;
 
-      // fire started
       if (toStatus === "fire" && fromStatus !== "fire") {
         isSafe && setIsSafe(false);
-        // await sendFireAlert();
       }
 
-      // fire stopped
       if (toStatus === "non-fire" && fromStatus === "fire") {
         !isSafe && setIsSafe(true);
-        // await sendSafeAlert();
       }
     };
 
@@ -61,38 +66,31 @@ export default function Home() {
     return () => {
       eventBus.off("fire:status-changed", handleStatusChange);
     };
-  }, []);
+  }, [isSafe]);
 
-  // pwa push noti
   useEffect(() => {
     const handler = async ({ fromStatus, toStatus }: any) => {
-      console.log("🚨 EVENT RECEIVED:", { fromStatus, toStatus });
-
       if (toStatus === "fire") {
-        console.log("🔥 sending FIRE push");
-
         await fetch("/api/push-noti", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            title: "🔥 Fire Alert",
+            title: "Fire Alert",
             body: "Fire detected!",
           }),
         });
       }
 
       if (fromStatus === "fire" && toStatus === "non-fire") {
-        console.log("🧯 sending SAFE push");
-
         await fetch("/api/push-noti", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            title: "🧯 Safe",
+            title: "Safe",
             body: "Fire has been extinguished",
           }),
         });
@@ -104,22 +102,62 @@ export default function Home() {
     return () => eventBus.off("fire:status-changed", handler);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSensorStatus = async () => {
+      try {
+        const response = await fetch("/api/sensor-status", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const data: SensorSnapshot = await response.json();
+        if (!cancelled) {
+          setSensorStatus(data);
+        }
+      } catch (error) {
+        console.error("Failed to load sensor status", error);
+      }
+    };
+
+    loadSensorStatus();
+    const intervalId = window.setInterval(loadSensorStatus, 2000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const formattedTemp =
+    sensorStatus.temperatureC !== null ? `${sensorStatus.temperatureC.toFixed(1)} °C` : "--";
+  const formattedHumidity =
+    sensorStatus.humidity !== null ? `${sensorStatus.humidity.toFixed(1)} %` : "--";
+  const formattedLastCheck = sensorStatus.updatedAt
+    ? new Date(sensorStatus.updatedAt).toLocaleTimeString()
+    : "--";
+  const sensorHealth =
+    sensorStatus.updatedAt &&
+    Date.now() - new Date(sensorStatus.updatedAt).getTime() < 10000
+      ? "Live"
+      : "Waiting";
+
   return (
     <Layout>
-      <div className="">
+      <div>
         <StatusCard isSafe={isSafe} />
       </div>
-    
-      <Card infoData={[
-          { title: "Device", description: "ECC-806", editable: false }
-        ]}
+
+      <Card
+        infoData={[{ title: "Device", description: "ECC-806", editable: false }]}
         switchFunc={() => console.log("Switch toggled")}
       />
 
-      <Card infoData={[
-          { title: "Temperature", description: "25°C", editable: false },
-          // { title: "Humidity", description: "Normal", editable: false },
-          { title: "Sensor Health", description: "Normal", editable: false },
+      <Card
+        infoData={[
+          { title: "Temperature", description: formattedTemp, editable: false },
+          { title: "Humidity", description: formattedHumidity, editable: false },
+          { title: "Last Update", description: formattedLastCheck, editable: false },
+          { title: "Sensor Health", description: sensorHealth, editable: false },
         ]}
         switchFunc={() => console.log("Switch toggled")}
       />
@@ -130,7 +168,6 @@ export default function Home() {
       >
         toggle status
       </button>
-
     </Layout>
   );
 }
