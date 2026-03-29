@@ -2,8 +2,6 @@ import React from 'react'
 
 export default function StatusCard({ isSafe }: { isSafe: boolean }) {
 
-
-
   return (
     <div 
         data-property-1={isSafe ? "safe" : "fire detected"} 
