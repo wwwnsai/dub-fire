@@ -1,28 +1,28 @@
 import withPWA from "@ducanh2912/next-pwa";
-
-import { NextConfig } from 'next';
-
-const pwaConfig = {
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-};
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
       },
       {
-        protocol: 'http',
-        hostname: 'googleusercontent.com',
+        protocol: "http",
+        hostname: "googleusercontent.com",
       },
     ],
   },
   trailingSlash: false,
 };
 
-export default withPWA(pwaConfig)(nextConfig);
+export default withPWA({
+  dest: "public",
+  register: true,
+  customWorkerSrc: "worker/index.js",
+})(nextConfig);

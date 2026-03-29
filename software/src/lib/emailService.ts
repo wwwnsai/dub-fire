@@ -173,18 +173,18 @@ export async function sendFireAlertNotification(
     console.log(`Sending notifications to ${subscribers.length} subscribers`);
 
     const emailPromises = subscribers.map(async (subscriber) => {
-      try {
-        await deliverEmail({
-          to: subscriber.email,
-          subject: `🔥 FIRE ALERT - ${
-            alertData.location || "Emergency Location"
-          }`,
-          html: emailTemplates.fireAlert(alertData),
-        });
-        console.log(`✅ Email sent to: ${subscriber.email}`);
-      } catch (error) {
-        console.error(`❌ Failed to send email to ${subscriber.email}:`, error);
-      }
+      // try {
+      //   await deliverEmail({
+      //     to: subscriber.email,
+      //     subject: `🔥 FIRE ALERT - ${
+      //       alertData.location || "Emergency Location"
+      //     }`,
+      //     html: emailTemplates.fireAlert(alertData),
+      //   });
+      //   console.log(`✅ Email sent to: ${subscriber.email}`);
+      // } catch (error) {
+      //   console.error(`❌ Failed to send email to ${subscriber.email}:`, error);
+      // }
     });
 
     await Promise.all(emailPromises);

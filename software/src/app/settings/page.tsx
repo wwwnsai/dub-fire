@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { User, RealtimeChannel } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Profile } from "@/lib/types/users";
+import { requestNotificationPermission } from '@/lib/pushNotiService';
 import pfp from '@/photo/pfp.jpg'
 import Card from '@/components/cards/Card';
 import ButtonCard from '@/components/cards/ButtonCard';
@@ -22,7 +23,7 @@ export default function page() {
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    const [editedUsername, setEditedUsername] = useState<String>("");
+    const [editedUsername, setEditedUsername] = useState<string>("");
     const [editedPassword, setEditedPassword] = useState({
         oldPassword: "",
         newPassword: "",
@@ -76,79 +77,71 @@ export default function page() {
     async function handleSaveChanges() {
         if (!user || !profile) return;
 
-        console.log("editedUsername:", editedUsername);
-        console.log("username changed?", editedUsername !== profile.username);
-        
         // Update Username
         if (editedUsername && editedUsername !== profile.username) {
             const { error } = await supabase
-                .from("profiles")
-                .update({ username: editedUsername })
-                .eq("id", user.id);
+            .from("profiles")
+            .update({ username: editedUsername })
+            .eq("id", user.id);
 
-            // Update Password (only for email users)
-            if (!isOAuthUser) {
-                const { oldPassword, newPassword, confirmPassword } = editedPassword;
-
-                // Only run if user typed something
-                if (oldPassword || newPassword || confirmPassword) {
-
-                    // Validation
-                    if (!oldPassword || !newPassword || !confirmPassword) {
-                        alert("Please fill all password fields");
-                        return;
-                    }
-
-                    if (newPassword !== confirmPassword) {
-                        alert("New password and confirm password do not match");
-                        return;
-                    }
-
-                    if (newPassword.length < 6) {
-                        alert("Password must be at least 6 characters");
-                        return;
-                    }
-
-                    // Re-authenticate (IMPORTANT)
-                    const { error: reAuthError } =
-                        await supabase.auth.signInWithPassword({
-                            email: user.email!,
-                            password: oldPassword,
-                        });
-
-                    if (reAuthError) {
-                        alert("Old password is incorrect");
-                        return;
-                    }
-
-                    // Update password
-                    const { error: updateError } =
-                        await supabase.auth.updateUser({
-                            password: newPassword,
-                        });
-
-                    if (updateError) {
-                        console.error("Password update error:", updateError.message);
-                    } else {
-                        console.log("Password updated");
-
-                        // Reset fields after success
-                        setEditedPassword({
-                            oldPassword: "",
-                            newPassword: "",
-                            confirmPassword: "",
-                        });
-                    }
-                }
-            }
-            
             if (error) {
-                console.error("Update error:", error.message);
+            console.error("Update username error:", error.message);
             } else {
-                console.log("✅ Username updated");
+            console.log("✅ Username updated");
             }
         }
-    }
+
+        // Update Password
+        if (!isOAuthUser) {
+            const { oldPassword, newPassword, confirmPassword } = editedPassword;
+
+            if (oldPassword || newPassword || confirmPassword) {
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                alert("Please fill all password fields");
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert("Passwords do not match");
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                alert("Password must be at least 6 characters");
+                return;
+            }
+
+            const { error: reAuthError } =
+                await supabase.auth.signInWithPassword({
+                email: user.email!,
+                password: oldPassword,
+                });
+
+            if (reAuthError) {
+                alert("Old password incorrect");
+                return;
+            }
+
+            const { error: updateError } =
+                await supabase.auth.updateUser({
+                password: newPassword,
+                });
+
+            if (updateError) {
+                console.error(updateError.message);
+            } else {
+                console.log("✅ Password updated");
+                setEditedPassword({
+                oldPassword: "",
+                newPassword: "",
+                confirmPassword: "",
+                });
+            }
+            }
+        }
+
+        console.log("✅ Save complete");
+        }
 
     useEffect(() => {
         if (profile && user) {
@@ -206,6 +199,12 @@ export default function page() {
                         ]}
                         switchFunc={handleSwitchToggle}
                     /> */}
+
+                    <ButtonCard
+                        title="Enable Notifications"
+                        triggerFunc={requestNotificationPermission}
+                        color="text-text-green"
+                    />
 
                     <LineAddFriendButton />
 

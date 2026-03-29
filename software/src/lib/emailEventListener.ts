@@ -63,24 +63,24 @@ export function initializeEmailEventListener() {
       };
 
       // Send email notification via API
-      const response = await fetch(API_ENDPOINTS.FIRE_ALERT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fromStatus: change.fromStatus,
-          toStatus: change.toStatus,
-          location: change.location,
-          coordinates: change.coordinates,
-        }),
-      });
+      // const response = await fetch(API_ENDPOINTS.FIRE_ALERT, {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     fromStatus: change.fromStatus,
+      //     toStatus: change.toStatus,
+      //     location: change.location,
+      //     coordinates: change.coordinates,
+      //   }),
+      // });
 
-      if (response.ok) {
-        console.log(`✅ Email alert sent for ${fromStatus} → ${toStatus}`);
-      } else {
-        console.error("❌ Failed to send email alert:", await response.text());
-      }
+      // if (response.ok) {
+      //   console.log(`✅ Email alert sent for ${fromStatus} → ${toStatus}`);
+      // } else {
+      //   console.error("❌ Failed to send email alert:", await response.text());
+      // }
     } catch (error) {
       console.error("❌ Error sending email alert:", error);
     }

@@ -1,6 +1,6 @@
 // Utility functions for common operations
 
-import { FireLocation, Location, SeverityChange } from "./types";
+import { FireLocation, Location, SeverityChange } from "@/lib/types";
 
 /**
  * Generate a unique location ID based on coordinates
