@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 
 webpush.setVapidDetails(
   "mailto:your@email.com",
@@ -8,9 +8,31 @@ webpush.setVapidDetails(
 );
 
 export async function POST(req: Request) {
+  // Require authentication before dispatching push notifications
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const token = authHeader.slice(7);
+  const supabaseServer = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  );
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabaseServer.auth.getUser();
+
+  if (authError || !user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { title, body } = await req.json();
 
-  const { data: subs, error } = await supabase
+  const { data: subs, error } = await supabaseServer
     .from("push_subscriptions")
     .select(`
       user_id,
@@ -24,15 +46,12 @@ export async function POST(req: Request) {
     `)
     .eq("profiles.push_noti", true);
 
-  
+  if (error) {
+    console.error("❌ DB query error:", error.message ?? "Unknown error");
+    return Response.json({ error: "Failed to retrieve subscriptions" }, { status: 500 });
+  }
+
   if (subs) {
-    console.log(
-      "📦 SUBS:",
-      subs.map((s) => ({
-        user_id: s.user_id,
-        push_noti: (s.profiles as any)?.push_noti,
-      }))
-    );
     await Promise.all(
       subs.map(async (sub) => {
         try {
@@ -51,8 +70,6 @@ export async function POST(req: Request) {
         }
       })
     );
-  } else {
-    console.info("❌ No valid subscriptions found:", error);
   }
 
   return Response.json({ success: true });

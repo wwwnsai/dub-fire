@@ -1,15 +1,43 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
-  const { user_id, endpoint, keys } = await req.json();
-
-  if (!user_id) {
-    return Response.json({ error: "No user_id" }, { status: 400 });
+  // Verify user identity server-side via Authorization header
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase.from("push_subscriptions").upsert(
+  const token = authHeader.slice(7);
+  const supabaseServer = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  );
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabaseServer.auth.getUser();
+
+  if (authError || !user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { endpoint, keys } = body;
+
+  // Validate required fields
+  if (!endpoint || typeof endpoint !== "string") {
+    return Response.json({ error: "Invalid or missing endpoint" }, { status: 400 });
+  }
+
+  if (!keys || typeof keys.p256dh !== "string" || typeof keys.auth !== "string") {
+    return Response.json({ error: "Invalid or missing subscription keys" }, { status: 400 });
+  }
+
+  const { error } = await supabaseServer.from("push_subscriptions").upsert(
     {
-      user_id,
+      user_id: user.id,
       endpoint,
       p256dh: keys.p256dh,
       auth: keys.auth,

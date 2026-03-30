@@ -30,7 +30,7 @@ export default function InfoCards({
                                 >
                                     {item.title}
                                 </h3>
-                                {item.title === "Push Notification" ? (console.log('Push Notification status:', item.description), 
+                                {item.title === "Push Notification" ? (
                                     <NotiReqSwitchButton />
                                 ) : (
                                     <p className="sen-regular text-text-secondary">{item.description}</p>

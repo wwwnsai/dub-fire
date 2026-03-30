@@ -35,13 +35,15 @@ export async function requestNotificationPermission() {
 
     // get user back
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    if (!user) {
+    if (!session?.user) {
       alert("Not logged in");
       return false;
     }
+
+    const accessToken = session.access_token;
 
     const registration = await navigator.serviceWorker.ready;
 
@@ -49,11 +51,15 @@ export async function requestNotificationPermission() {
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        console.error("VAPID public key is not configured");
+        return false;
+      }
+
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-        ),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
     }
 
@@ -61,13 +67,18 @@ export async function requestNotificationPermission() {
 
     const subJson = subscription.toJSON();
 
+    if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) {
+      console.error("❌ Subscription missing required keys");
+      return false;
+    }
+
     const res = await fetch("/api/subscribe", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        user_id: user.id,
         endpoint: subJson.endpoint,
         keys: subJson.keys,
       }),

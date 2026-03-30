@@ -33,7 +33,10 @@ export default function NotiReqSwitchButton() {
       }
 
       // sync DB + browser permission
-      const isGranted = Notification.permission === 'granted';
+      let isGranted = false;
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        isGranted = Notification.permission === 'granted';
+      }
       setNotiStatus(data.push_noti && isGranted);
 
       setLoading(false);
@@ -68,17 +71,8 @@ export default function NotiReqSwitchButton() {
         return;
       }
 
-      await fetch('/api/push-noti', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: 'Notifications Enabled 🎉',
-          body: 'You will now receive updates',
-        }),
-      });
-
+      // Show a local confirmation instead of broadcasting to all users
+      toast.success('Notifications enabled. You will now receive updates');
 
       const { error } = await supabase
         .from('profiles')

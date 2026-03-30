@@ -8,12 +8,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { User, RealtimeChannel } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Profile } from "@/lib/types/users";
-import { requestNotificationPermission } from '@/lib/pushNotiService';
 import pfp from '@/photo/pfp.jpg'
 import Card from '@/components/cards/Card';
 import ButtonCard from '@/components/cards/ButtonCard';
 import LineAddFriendButton from '@/components/buttons/LineAddFriendButton';
-import NotiReqSwitchButton from '@/components/buttons/NotiReqSwitchButton';
 
 export default function page() {
     const router = useRouter();
