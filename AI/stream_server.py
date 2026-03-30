@@ -2,6 +2,7 @@ import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Callable, Optional
 from urllib.parse import urlparse
 
 import cv2
@@ -200,7 +201,7 @@ class StreamHandler(BaseHTTPRequestHandler):
                 self.wfile.write(frame)
                 self.wfile.write(b"\r\n")
                 time.sleep(self.server.frame_interval)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
 
     def log_message(self, format, *args):

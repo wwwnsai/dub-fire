@@ -119,8 +119,8 @@ class FireDetectionApp:
             self._send_tracking_command(fire_status["fire_confirmed"], thermal_info["target"])
 
             self.bridge.poll()
-            self.stream_store.update_sensor_snapshot(self.bridge.snapshot_dict())
             self._update_fps()
+            self.stream_store.update_sensor_snapshot(self._build_sensor_snapshot())
 
             display_rgb = self._build_rgb_display(
                 rgb_frame,
