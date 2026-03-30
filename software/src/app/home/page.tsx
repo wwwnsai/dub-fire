@@ -12,32 +12,36 @@ import { eventBus } from "@/lib/eventBus";
 export default function Home() {
   const { getCurrentFireStatus } = useFireStatus();
   const currentStatus = getCurrentFireStatus();
-  const [isSafe, setIsSafe] = useState(currentStatus === "safe");
+  const [isSafe, setIsSafe] = useState(true);
 
   function handleToggleStatus() {
-    setIsSafe((prev) => !prev);
+    const prev = isSafe;
+    const newIsSafe = !prev;
 
-    const fromStatus = isSafe ? "non-fire" : "fire";
-    const toStatus = isSafe ? "fire" : "non-fire";
+    setIsSafe(newIsSafe);
+
+    const fromStatus = prev ? "non-fire" : "fire";
+    const toStatus = newIsSafe ? "non-fire" : "fire";
 
     console.log("🔥 emitting event:", { fromStatus, toStatus });
 
     eventBus.emit("fire:status-changed", {
-      locationId: "manual-test", 
+      locationId: "manual-test",
       fromStatus,
       toStatus,
       location: {
         lat: 0,
         lng: 0,
         name: "Manual Toggle",
-        severity: toStatus === "fire" ? "fire" : "non-fire",
+        severity: toStatus,
       },
     });
   }
 
   useEffect(() => {
-    setIsSafe(currentStatus === "safe");
-  }, [currentStatus]);
+    const status = getCurrentFireStatus();
+    setIsSafe(status === "safe");
+  }, []);
 
   useEffect(() => {
     const handleStatusChange = async (event: any) => {
@@ -68,8 +72,16 @@ export default function Home() {
     const handler = async ({ fromStatus, toStatus }: any) => {
       console.log("🚨 EVENT RECEIVED:", { fromStatus, toStatus });
 
+      // 🔥 FIRE
       if (toStatus === "fire") {
         console.log("🔥 sending FIRE push");
+
+        // fallback (when tab is active)
+        if (Notification.permission === "granted") {
+          new Notification("🔥 Fire Alert", {
+            body: "Fire detected!",
+          });
+        }
 
         await fetch("/api/push-noti", {
           method: "POST",
@@ -83,8 +95,15 @@ export default function Home() {
         });
       }
 
+      // 🧯 SAFE
       if (fromStatus === "fire" && toStatus === "non-fire") {
         console.log("🧯 sending SAFE push");
+
+        if (Notification.permission === "granted") {
+          new Notification("🧯 Safe", {
+            body: "Fire has been extinguished",
+          });
+        }
 
         await fetch("/api/push-noti", {
           method: "POST",
@@ -100,7 +119,6 @@ export default function Home() {
     };
 
     eventBus.on("fire:status-changed", handler);
-
     return () => eventBus.off("fire:status-changed", handler);
   }, []);
 

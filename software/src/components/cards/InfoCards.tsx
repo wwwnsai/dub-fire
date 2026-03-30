@@ -1,4 +1,5 @@
 import LogoutButton from "../buttons/LogoutButton"
+import NotiReqSwitchButton from "../buttons/NotiReqSwitchButton";
 import SwitchButton from "../buttons/SwitchButton";
 
 type InfoItem = { title: string; description: string };
@@ -29,8 +30,8 @@ export default function InfoCards({
                                 >
                                     {item.title}
                                 </h3>
-                                {item.title === "Email Notification" ? (console.log('Email Notification status:', item.description), 
-                                    <SwitchButton status={item.description === "On"} switchFunc={switchFunc} />
+                                {item.title === "Push Notification" ? (console.log('Push Notification status:', item.description), 
+                                    <NotiReqSwitchButton />
                                 ) : (
                                     <p className="sen-regular text-text-secondary">{item.description}</p>
                                 )}

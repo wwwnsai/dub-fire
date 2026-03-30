@@ -156,7 +156,7 @@ export default function Page() {
         },
         {
             "1": {
-                title: "Email Notification",
+                title: "Push Notification",
                 description: emailNotifications ? "On" : "Off"
             }
         },

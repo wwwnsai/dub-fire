@@ -13,6 +13,7 @@ import pfp from '@/photo/pfp.jpg'
 import Card from '@/components/cards/Card';
 import ButtonCard from '@/components/cards/ButtonCard';
 import LineAddFriendButton from '@/components/buttons/LineAddFriendButton';
+import NotiReqSwitchButton from '@/components/buttons/NotiReqSwitchButton';
 
 export default function page() {
     const router = useRouter();
@@ -194,17 +195,18 @@ export default function page() {
                         />
                     )}
 
-                    {/* <Card infoData={[
-                            { title: "Email Notification", description: toggleNotifications ? "On" : "Off", editable: false }
+                    <Card infoData={[
+                            { title: "Push Notification", description: "", editable: false }
                         ]}
-                        switchFunc={handleSwitchToggle}
-                    /> */}
+                    />
 
-                    <ButtonCard
+                    {/* <ButtonCard
                         title="Enable Notifications"
                         triggerFunc={requestNotificationPermission}
                         color="text-text-green"
-                    />
+                    /> */}
+
+
 
                     <LineAddFriendButton />
 

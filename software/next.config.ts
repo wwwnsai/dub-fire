@@ -1,4 +1,4 @@
-import withPWA from "@ducanh2912/next-pwa";
+// import withPWA from "@ducanh2912/next-pwa";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -21,8 +21,11 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
 };
 
-export default withPWA({
-  dest: "public",
-  register: true,
-  customWorkerSrc: "worker/index.js",
-})(nextConfig);
+// export default withPWA({
+//   dest: "public",
+//   register: true,
+
+//   customWorkerSrc: "worker/index",
+// })(nextConfig);
+
+export default nextConfig;
