@@ -13,44 +13,47 @@ export async function POST(req: Request) {
   const { data: subs, error } = await supabase
     .from("push_subscriptions")
     .select(`
+      user_id,
       endpoint,
       p256dh,
       auth,
-      profiles(push_noti)
-    `);
+      profiles!inner (
+        id,
+        push_noti
+      )
+    `)
+    .eq("profiles.push_noti", true);
 
-  if (error) {
-    console.error(error);
-    return Response.json({ error }, { status: 500 });
-  }
-
-  console.log("📦 ALL SUBS:", subs);
-
-  const validSubs = subs.filter(
-    (sub) => (sub.profiles as any)?.push_noti === true
-  );
-  console.log("✅ VALID SUBS:", validSubs);
-
-  await Promise.all(
-    validSubs.map(async (sub) => {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh,
-              auth: sub.auth,
+  
+  if (subs) {
+    console.log(
+      "📦 SUBS:",
+      subs.map((s) => ({
+        user_id: s.user_id,
+        push_noti: (s.profiles as any)?.push_noti,
+      }))
+    );
+    await Promise.all(
+      subs.map(async (sub) => {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth,
+              },
             },
-          },
-          JSON.stringify({ title, body })
-        );
-
-        console.log("✅ Sent push");
-      } catch (err) {
-        console.error("❌ Push error:", err);
-      }
-    })
-  );
+            JSON.stringify({ title, body })
+          );
+        } catch (err) {
+          console.error("❌ Push error:", err);
+        }
+      })
+    );
+  } else {
+    console.info("❌ No valid subscriptions found:", error);
+  }
 
   return Response.json({ success: true });
 }

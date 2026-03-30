@@ -12,55 +12,65 @@ export function urlBase64ToUint8Array(base64String: string) {
 
 export async function requestNotificationPermission() {
   try {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    // // detect real PWA mode
-    // const isStandalone =
-    //   window.matchMedia("(display-mode: standalone)").matches ||
-    //   (window.navigator as any).standalone === true;
-
-    // // detect iOS Safari specifically (not Chrome)
-    // const isSafari =
-    //   /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-    // if (isIOS && isSafari && !isStandalone) {
-    //   alert("📲 Please 'Add to Home Screen' to enable notifications");
-    //   return;
-    // }
-
-    if (!("Notification" in window)) { alert("Browser does not support notifications"); return; }
-    if (!("serviceWorker" in navigator)) { alert("Service Worker not supported"); return; }
-    if (!("PushManager" in window)) { alert("Push not supported"); return; }
-
-    console.log("permission:", Notification.permission);
-
-    if (Notification.permission !== "granted") {
-      await Notification.requestPermission();
+    if (!("Notification" in window)) {
+      alert("Browser does not support notifications");
+      return false;
     }
-    
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") { alert("Permission denied"); return; }
 
-    // ✅ Get user on CLIENT side (this works)
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { alert("Not logged in"); return; }
+    if (!("serviceWorker" in navigator)) {
+      alert("Service Worker not supported");
+      return false;
+    }
+
+    if (!("PushManager" in window)) {
+      alert("Push not supported");
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      alert("Permission denied");
+      return false;
+    }
+
+    // get user back
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Not logged in");
+      return false;
+    }
 
     const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-      ),
-    });
+
+    // reuse existing subscription
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+        ),
+      });
+    }
 
     console.log("✅ Subscribed:", subscription);
 
-    // Send user_id along with subscription
     const subJson = subscription.toJSON();
+
     const res = await fetch("/api/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.id, endpoint: subJson.endpoint, keys: subJson.keys }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        endpoint: subJson.endpoint,
+        keys: subJson.keys,
+      }),
     });
 
     if (!res.ok) {
@@ -69,7 +79,6 @@ export async function requestNotificationPermission() {
     }
 
     return true;
-
   } catch (err) {
     console.error("Push error:", err);
     return false;

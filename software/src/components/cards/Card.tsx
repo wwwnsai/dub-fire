@@ -66,7 +66,7 @@ export default function Card({
                   }}
                 />
               </div>
-            ) : item.title === "Push Notification" ? (
+            ) : item.title === "Enable Notification" ? (
               <NotiReqSwitchButton />
             ) : (
               <div className="text-sm sen-semibold text-text-secondary">

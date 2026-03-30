@@ -196,17 +196,9 @@ export default function page() {
                     )}
 
                     <Card infoData={[
-                            { title: "Push Notification", description: "", editable: false }
+                            { title: "Enable Notification", description: "", editable: false }
                         ]}
                     />
-
-                    {/* <ButtonCard
-                        title="Enable Notifications"
-                        triggerFunc={requestNotificationPermission}
-                        color="text-text-green"
-                    /> */}
-
-
 
                     <LineAddFriendButton />
 

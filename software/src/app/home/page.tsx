@@ -11,7 +11,6 @@ import { eventBus } from "@/lib/eventBus";
 
 export default function Home() {
   const { getCurrentFireStatus } = useFireStatus();
-  const currentStatus = getCurrentFireStatus();
   const [isSafe, setIsSafe] = useState(true);
 
   function handleToggleStatus() {
@@ -77,11 +76,11 @@ export default function Home() {
         console.log("🔥 sending FIRE push");
 
         // fallback (when tab is active)
-        if (Notification.permission === "granted") {
-          new Notification("🔥 Fire Alert", {
-            body: "Fire detected!",
-          });
-        }
+        // if (Notification.permission === "granted") {
+        //   new Notification("🔥 Fire Alert", {
+        //     body: "Fire detected!",
+        //   });
+        // }
 
         await fetch("/api/push-noti", {
           method: "POST",
@@ -99,11 +98,11 @@ export default function Home() {
       if (fromStatus === "fire" && toStatus === "non-fire") {
         console.log("🧯 sending SAFE push");
 
-        if (Notification.permission === "granted") {
-          new Notification("🧯 Safe", {
-            body: "Fire has been extinguished",
-          });
-        }
+        // if (Notification.permission === "granted") {
+        //   new Notification("🧯 Safe", {
+        //     body: "Fire has been extinguished",
+        //   });
+        // }
 
         await fetch("/api/push-noti", {
           method: "POST",

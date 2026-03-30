@@ -32,7 +32,7 @@ export default function NotiReqSwitchButton() {
         return;
       }
 
-      // ✅ sync DB + browser permission
+      // sync DB + browser permission
       const isGranted = Notification.permission === 'granted';
       setNotiStatus(data.push_noti && isGranted);
 
@@ -59,7 +59,7 @@ export default function NotiReqSwitchButton() {
     const newStatus = !notiStatus;
 
     // handle enabling
-    if (newStatus) {
+    if (newStatus === true) {
       const success = await requestNotificationPermission();
 
       if (!success) {
@@ -79,7 +79,7 @@ export default function NotiReqSwitchButton() {
         }),
       });
 
-      
+
       const { error } = await supabase
         .from('profiles')
         .update({ push_noti: newStatus })
@@ -90,8 +90,20 @@ export default function NotiReqSwitchButton() {
         toast.error('Failed to update setting');
         setLoading(false);
         return;
-    }
+      } 
+    } else {
+      // handle disabling
+      const { error } = await supabase
+        .from('profiles')
+        .update({ push_noti: newStatus })
+        .eq('id', user.id);
 
+      if (error) {
+        console.error(error);
+        toast.error('Failed to update setting');
+        setLoading(false);
+        return;
+      }
     }
 
     setNotiStatus(newStatus);
