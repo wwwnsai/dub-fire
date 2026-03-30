@@ -2,6 +2,7 @@ import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Callable, Optional
 
 import cv2
 
@@ -15,6 +16,15 @@ class StreamStore:
         self._thermal_frame = None
         self._sensor_snapshot = {}
         self._lock = threading.Lock()
+        self._control_handler: Optional[Callable[[str], Optional[dict]]] = None
+
+    def set_control_handler(self, handler: Callable[[str], Optional[dict]]) -> None:
+        self._control_handler = handler
+
+    def handle_control(self, action: str) -> Optional[dict]:
+        if self._control_handler is not None:
+            return self._control_handler(action)
+        return None
 
     def update_rgb_frame(self, frame) -> None:
         encoded = self._encode_frame(frame)
@@ -81,6 +91,46 @@ class StreamHandler(BaseHTTPRequestHandler):
             return
 
         self.send_error(404)
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_POST(self):
+        if self.path != "/control":
+            self.send_error(404)
+            return
+
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+            body = json.loads(raw_body.decode("utf-8"))
+            action = body.get("action", "")
+        except (json.JSONDecodeError, ValueError):
+            self.send_error(400, "Invalid JSON body")
+            return
+
+        if not action:
+            self.send_error(400, "Missing action")
+            return
+
+        state = self.server.store.handle_control(action)
+
+        if state is None:
+            self.send_error(503, "Control handler not available")
+            return
+
+        payload = json.dumps({"ok": True, "state": state}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-cache, private")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def _write_index(self):
         self.send_response(200)
