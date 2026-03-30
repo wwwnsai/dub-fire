@@ -201,7 +201,7 @@ const Layout = ({ children }: LayoutProps) => {
       </header>
 
       {/* Main */}
-      <main className="flex-1 pt-20 pb-14 px-4">{children}</main>
+      <main className="flex-1 pt-20 pb-28 px-4">{children}</main>
 
       {/* Bottom Navbar */}
       <div className="px-4 max-w-screen w-full mx-auto">

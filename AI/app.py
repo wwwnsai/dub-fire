@@ -1,5 +1,6 @@
 import time
 from dataclasses import dataclass, replace
+import threading
 
 import cv2
 import numpy as np
@@ -25,6 +26,7 @@ class RuntimeState:
     fps_time: float = 0.0
     fps_count: int = 0
     fps: int = 0
+    manual_override_until: float = 0.0
 
 
 class FireDetectionApp:
@@ -33,7 +35,8 @@ class FireDetectionApp:
         self.model = YOLO(self.settings.model_path)
         self.bridge = ESP32Bridge(self.settings)
         self.stream_store = StreamStore(self.settings.jpeg_quality)
-        self.stream_server = StreamServer(self.settings, self.stream_store)
+        self.state_lock = threading.RLock()
+        self.stream_server = StreamServer(self.settings, self.stream_store, self.handle_command)
         self.state = RuntimeState(fps_time=time.time())
 
     def run(self) -> None:
@@ -115,7 +118,7 @@ class FireDetectionApp:
             self._send_tracking_command(fire_status["fire_confirmed"], thermal_info["target"])
 
             self.bridge.poll()
-            self.stream_store.update_sensor_snapshot(self.bridge.snapshot_dict())
+            self.stream_store.update_sensor_snapshot(self._build_sensor_snapshot())
             self._update_fps()
 
             display_rgb = self._build_rgb_display(
@@ -204,6 +207,98 @@ class FireDetectionApp:
         )
         return info
 
+    def _build_sensor_snapshot(self) -> dict:
+        snapshot = self.bridge.snapshot_dict()
+        with self.state_lock:
+            snapshot.update(
+                {
+                    "isArmed": self.state.is_armed,
+                    "autoTrack": self.state.auto_track,
+                    "autoShoot": self.state.auto_shoot,
+                    "emergencyStop": self.state.emergency_stop,
+                    "shotCount": self.state.shot_count,
+                    "fireTempMin": self.settings.fire_temp_min,
+                    "fps": self.state.fps,
+                }
+            )
+        return snapshot
+
+    def handle_command(self, action: str) -> dict:
+        now = time.time()
+
+        with self.state_lock:
+            if action == "arm":
+                self.state.emergency_stop = False
+                self.state.is_armed = True
+                self.bridge.force_send("A:1\n")
+            elif action == "disarm":
+                self.state.is_armed = False
+                self.state.shot_count = 0
+                self.bridge.force_send("A:0\n")
+            elif action == "track_on":
+                self.state.emergency_stop = False
+                self.state.auto_track = True
+                self.bridge.force_send("T:1\n")
+            elif action == "track_off":
+                self.state.auto_track = False
+                self.bridge.force_send("T:0\n")
+            elif action == "shoot_on":
+                self.state.emergency_stop = False
+                self.state.auto_shoot = True
+            elif action == "shoot_off":
+                self.state.auto_shoot = False
+            elif action == "shoot_now":
+                self.state.emergency_stop = False
+                self.state.last_shoot_time = now
+                self.state.shot_count += 1
+                self.bridge.force_send("S:1\n")
+            elif action == "emergency_stop":
+                self.state.emergency_stop = True
+                self.state.is_armed = False
+                self.state.auto_shoot = False
+                self.bridge.force_send("A:0\n")
+                self.bridge.force_send("T:0\n")
+            elif action == "resume":
+                self.state.emergency_stop = False
+                self.state.auto_track = True
+                self.state.auto_shoot = True
+                self.bridge.force_send("T:1\n")
+            elif action == "temp_up":
+                self.settings = replace(self.settings, fire_temp_min=min(500, self.settings.fire_temp_min + 10))
+            elif action == "temp_down":
+                self.settings = replace(self.settings, fire_temp_min=max(50, self.settings.fire_temp_min - 10))
+            elif action == "pan_left":
+                self._queue_manual_nudge(-0.9, 0.0)
+            elif action == "pan_right":
+                self._queue_manual_nudge(0.9, 0.0)
+            elif action == "tilt_up":
+                self._queue_manual_nudge(0.0, -0.9)
+            elif action == "tilt_down":
+                self._queue_manual_nudge(0.0, 0.9)
+            else:
+                raise ValueError(f"Unsupported action: {action}")
+
+            snapshot = self._build_sensor_snapshot()
+
+        return {"ok": True, "action": action, "state": snapshot}
+
+    def _queue_manual_nudge(self, norm_x: float, norm_y: float, duration: float = 0.18) -> None:
+        previous_auto_track = self.state.auto_track
+        self.state.manual_override_until = time.time() + duration
+        thread = threading.Thread(
+            target=self._run_manual_nudge,
+            args=(norm_x, norm_y, duration, previous_auto_track),
+            daemon=True,
+        )
+        thread.start()
+
+    def _run_manual_nudge(self, norm_x: float, norm_y: float, duration: float, previous_auto_track: bool) -> None:
+        self.bridge.force_send("T:1\n")
+        self.bridge.force_send(f"F:{norm_x:.3f},{norm_y:.3f}\n")
+        time.sleep(duration)
+        self.bridge.force_send("F:NONE\n")
+        self.bridge.force_send("T:1\n" if previous_auto_track else "T:0\n")
+
     def _evaluate_fire_status(self, rgb_target, thermal_target, max_temp: float):
         if thermal_target is not None and rgb_target is not None:
             return {
@@ -285,6 +380,9 @@ class FireDetectionApp:
             print(f">>>>> SHOT FIRED! (#{self.state.shot_count}, temp={max_temp:.0f}C) <<<<<")
 
     def _send_tracking_command(self, fire_confirmed: bool, thermal_target: FireTarget | None) -> None:
+        if self.state.manual_override_until > time.time():
+            return
+
         if fire_confirmed and thermal_target is not None:
             self.bridge.send(f"F:{thermal_target.norm_x:.3f},{thermal_target.norm_y:.3f}\n")
         else:

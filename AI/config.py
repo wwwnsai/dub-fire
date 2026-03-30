@@ -28,7 +28,7 @@ def load_settings() -> Settings:
         rgb_cam=int(os.getenv("RGB_CAM", "2")),
         thermal_cam=int(os.getenv("THERMAL_CAM", "1")),
         enable_local_display=os.getenv("ENABLE_LOCAL_DISPLAY", "1") == "1",
-        esp32_port=os.getenv("ESP32_PORT", "COM8"),
+        esp32_port=os.getenv("ESP32_PORT", "COM5"),
         esp32_baud=int(os.getenv("ESP32_BAUD", "115200")),
         sensor_status_api=os.getenv("SENSOR_STATUS_API", "http://127.0.0.1:3000/api/sensor-status"),
         stream_host=os.getenv("STREAM_HOST", "0.0.0.0"),
@@ -40,6 +40,6 @@ def load_settings() -> Settings:
         shoot_confirm_time=float(os.getenv("SHOOT_CONFIRM_TIME", "2.0")),
         shoot_cooldown=float(os.getenv("SHOOT_COOLDOWN", "3.0")),
         disarm_delay=float(os.getenv("DISARM_DELAY", "5.0")),
-        stream_fps=float(os.getenv("STREAM_FPS", "30")),
+        stream_fps=float(os.getenv("STREAM_FPS", "12")),
         jpeg_quality=int(os.getenv("JPEG_QUALITY", "80")),
     )

@@ -12,8 +12,11 @@ const LiveCamera: FC<LiveCameraProps> = ({ src }) => {
     setActiveSrc("");
 
     const timer = window.setTimeout(() => {
-      setActiveSrc(src);
-    }, 75);
+      // Cache-bust forces a fresh connection — needed for MJPEG streams where
+      // the browser may not close the previous persistent connection fast enough.
+      const cacheBustedSrc = `${src}${src.includes("?") ? "&" : "?"}_t=${Date.now()}`;
+      setActiveSrc(cacheBustedSrc);
+    }, 300);
 
     return () => {
       window.clearTimeout(timer);

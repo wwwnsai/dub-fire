@@ -2,6 +2,7 @@ import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
 
 import cv2
 
@@ -56,31 +57,77 @@ class StreamStore:
 
 
 class StreamHTTPServer(ThreadingHTTPServer):
-    def __init__(self, server_address, request_handler_class, store: StreamStore, fps: float):
+    def __init__(self, server_address, request_handler_class, store: StreamStore, fps: float, command_handler=None):
         super().__init__(server_address, request_handler_class)
         self.store = store
         self.frame_interval = 1.0 / fps if fps > 0 else 0.03
+        self.command_handler = command_handler
 
 
 class StreamHandler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._write_cors_headers()
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def do_GET(self):
-        if self.path == "/":
+        path = urlparse(self.path).path
+
+        if path == "/":
             self._write_index()
             return
 
-        if self.path == "/rgb_feed":
+        if path == "/rgb_feed":
             self._stream_frames(self.server.store.get_rgb_frame)
             return
 
-        if self.path == "/thermal_feed":
+        if path == "/thermal_feed":
             self._stream_frames(self.server.store.get_thermal_frame)
             return
 
-        if self.path == "/sensor":
+        if path == "/sensor":
             self._write_sensor_snapshot()
             return
 
         self.send_error(404)
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+
+        if path != "/control":
+            self.send_error(404)
+            return
+
+        if self.server.command_handler is None:
+            self._write_json({"error": "Control handler unavailable"}, 503)
+            return
+
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+
+        try:
+            payload = json.loads(raw_body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self._write_json({"error": "Invalid JSON body"}, 400)
+            return
+
+        action = payload.get("action")
+        if not isinstance(action, str) or not action:
+            self._write_json({"error": "Missing action"}, 400)
+            return
+
+        try:
+            result = self.server.command_handler(action)
+        except ValueError as exc:
+            self._write_json({"error": str(exc)}, 400)
+            return
+        except Exception as exc:
+            self._write_json({"error": f"Control failed: {exc}"}, 500)
+            return
+
+        self._write_json(result, 200)
 
     def _write_index(self):
         self.send_response(200)
@@ -102,12 +149,27 @@ class StreamHandler(BaseHTTPRequestHandler):
     def _write_sensor_snapshot(self):
         payload = json.dumps(self.server.store.get_sensor_snapshot()).encode("utf-8")
         self.send_response(200)
+        self._write_cors_headers()
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-cache, private")
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
+
+    def _write_json(self, data: dict, status_code: int):
+        payload = json.dumps(data).encode("utf-8")
+        self.send_response(status_code)
+        self._write_cors_headers()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-cache, private")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _write_cors_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
     def _stream_frames(self, frame_getter):
         self.send_response(200)
@@ -137,13 +199,14 @@ class StreamHandler(BaseHTTPRequestHandler):
 
 
 class StreamServer:
-    def __init__(self, settings: Settings, store: StreamStore):
+    def __init__(self, settings: Settings, store: StreamStore, command_handler=None):
         self.settings = settings
         self.server = StreamHTTPServer(
             (settings.stream_host, settings.stream_port),
             StreamHandler,
             store,
             settings.stream_fps,
+            command_handler,
         )
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
