@@ -45,7 +45,23 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    if (!rawBody.trim()) {
+      return NextResponse.json(
+        { error: "Request body is empty" },
+        { status: 400 }
+      );
+    }
+
+    let body: any;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        { error: "Request body is not valid JSON" },
+        { status: 400 }
+      );
+    }
 
     const nextStatus: SensorSnapshot = {
       temperatureC: typeof body.temperatureC === "number" ? body.temperatureC : null,

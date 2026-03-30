@@ -1,20 +1,37 @@
 // components/LiveCamera.tsx
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 
 interface LiveCameraProps {
   src: string;
 }
 
 const LiveCamera: FC<LiveCameraProps> = ({ src }) => {
+  const [activeSrc, setActiveSrc] = useState("");
+
+  useEffect(() => {
+    setActiveSrc("");
+
+    const timer = window.setTimeout(() => {
+      setActiveSrc(src);
+    }, 75);
+
+    return () => {
+      window.clearTimeout(timer);
+      setActiveSrc("");
+    };
+  }, [src]);
+
   return (
-    <div className="mt-6">
-      <div className="rounded-lg overflow-hidden shadow">
-        <img
-          src={src}
-          alt="Live camera"
-          className="w-full h-auto"
-          referrerPolicy="no-referrer"
-        />
+    <div className="mt-3">
+      <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-[0px_4px_10px_0px_rgba(0,0,0,0.20)]">
+        {activeSrc ? (
+          <img
+            src={activeSrc}
+            alt="Live camera"
+            className="h-full w-full object-contain"
+            referrerPolicy="no-referrer"
+          />
+        ) : null}
       </div>
     </div>
   );

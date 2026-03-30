@@ -1,6 +1,8 @@
 import withPWA from "@ducanh2912/next-pwa";
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   eslint: {
@@ -23,6 +25,7 @@ const nextConfig: NextConfig = {
 
 export default withPWA({
   dest: "public",
-  register: true,
-  customWorkerSrc: "worker/index.js",
+  disable: !isProd,
+  register: isProd,
+  customWorkerSrc: "worker",
 })(nextConfig);

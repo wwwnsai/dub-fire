@@ -1,3 +1,5 @@
+"use client";
+
 // components/Layout.tsx
 import { ReactNode } from "react";
 import NotificationBadge, { Notification } from "./NotificationBadge";
