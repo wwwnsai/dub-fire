@@ -44,6 +44,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const apiKey = process.env.SENSOR_STATUS_API_KEY;
+  if (apiKey) {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || authHeader !== `Bearer ${apiKey}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   try {
     const rawBody = await request.text();
     if (!rawBody.trim()) {
@@ -63,15 +71,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const rawUpdatedAt = body.updatedAt;
+    const parsedTime =
+      typeof rawUpdatedAt === "string" ? Date.parse(rawUpdatedAt) : NaN;
+    const updatedAt = !isNaN(parsedTime)
+      ? rawUpdatedAt
+      : new Date().toISOString();
+
     const nextStatus: SensorSnapshot = {
       temperatureC: typeof body.temperatureC === "number" ? body.temperatureC : null,
       humidity: typeof body.humidity === "number" ? body.humidity : null,
       imuPitch: typeof body.imuPitch === "number" ? body.imuPitch : null,
       imuRoll: typeof body.imuRoll === "number" ? body.imuRoll : null,
-      updatedAt:
-        typeof body.updatedAt === "string"
-          ? body.updatedAt
-          : new Date().toISOString(),
+      updatedAt,
       source: typeof body.source === "string" ? body.source : "esp32",
     };
 

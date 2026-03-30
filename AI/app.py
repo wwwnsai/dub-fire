@@ -40,6 +40,7 @@ class FireDetectionApp:
         self.state = RuntimeState(fps_time=time.time())
 
     def run(self) -> None:
+        self.stream_store.set_control_handler(self._apply_control)
         self.stream_server.start()
 
         rgb_cap = cv2.VideoCapture(self.settings.rgb_cam)
@@ -118,7 +119,7 @@ class FireDetectionApp:
             self._send_tracking_command(fire_status["fire_confirmed"], thermal_info["target"])
 
             self.bridge.poll()
-            self.stream_store.update_sensor_snapshot(self._build_sensor_snapshot())
+            self.stream_store.update_sensor_snapshot(self.bridge.snapshot_dict())
             self._update_fps()
 
             display_rgb = self._build_rgb_display(
@@ -503,6 +504,63 @@ class FireDetectionApp:
             stream_thermal = np.zeros((half_h, half_w, 3), dtype=np.uint8)
 
         return {"display": thermal_show, "mask": thermal_mask_show, "stream": stream_thermal}
+
+    def _current_state_dict(self) -> dict:
+        return {
+            "isArmed": self.state.is_armed,
+            "autoTrack": self.state.auto_track,
+            "autoShoot": self.state.auto_shoot,
+            "emergencyStop": self.state.emergency_stop,
+            "shotCount": self.state.shot_count,
+            "fireTempMin": self.settings.fire_temp_min,
+            "fps": self.state.fps,
+        }
+
+    def _apply_control(self, action: str) -> dict:
+        if action == "arm":
+            self.state.is_armed = True
+            self.bridge.force_send("A:1\n")
+        elif action == "disarm":
+            self.state.is_armed = False
+            self.bridge.force_send("A:0\n")
+        elif action == "track_on":
+            self.state.auto_track = True
+            self.bridge.force_send("T:1\n")
+        elif action == "track_off":
+            self.state.auto_track = False
+            self.bridge.force_send("T:0\n")
+        elif action == "shoot_on":
+            self.state.auto_shoot = True
+            self.state.emergency_stop = False
+        elif action == "shoot_off":
+            self.state.auto_shoot = False
+        elif action == "shoot_now":
+            self.bridge.force_send("S:1\n")
+            self.state.shot_count += 1
+        elif action == "emergency_stop":
+            self.state.emergency_stop = True
+            self.state.is_armed = False
+            self.state.auto_shoot = False
+            self.bridge.force_send("A:0\n")
+            self.bridge.force_send("T:0\n")
+        elif action == "resume":
+            self.state.emergency_stop = False
+            self.state.auto_track = True
+            self.state.auto_shoot = True
+            self.bridge.force_send("T:1\n")
+        elif action == "tilt_up":
+            self.bridge.force_send("M:U\n")
+        elif action == "tilt_down":
+            self.bridge.force_send("M:D\n")
+        elif action == "pan_left":
+            self.bridge.force_send("M:L\n")
+        elif action == "pan_right":
+            self.bridge.force_send("M:R\n")
+        elif action == "temp_up":
+            self.settings = replace(self.settings, fire_temp_min=min(500, self.settings.fire_temp_min + 10))
+        elif action == "temp_down":
+            self.settings = replace(self.settings, fire_temp_min=max(50, self.settings.fire_temp_min - 10))
+        return self._current_state_dict()
 
     def _handle_key_input(self) -> bool:
         key = (cv2.waitKey(1) & 0xFF) if self.settings.enable_local_display else 255

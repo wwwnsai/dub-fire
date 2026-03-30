@@ -16,6 +16,15 @@ class StreamStore:
         self._thermal_frame = None
         self._sensor_snapshot = {}
         self._lock = threading.Lock()
+        self._control_handler: Optional[Callable[[str], Optional[dict]]] = None
+
+    def set_control_handler(self, handler: Callable[[str], Optional[dict]]) -> None:
+        self._control_handler = handler
+
+    def handle_control(self, action: str) -> Optional[dict]:
+        if self._control_handler is not None:
+            return self._control_handler(action)
+        return None
 
     def update_rgb_frame(self, frame) -> None:
         encoded = self._encode_frame(frame)

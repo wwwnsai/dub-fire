@@ -10,6 +10,7 @@ class Settings:
     esp32_port: str
     esp32_baud: int
     sensor_status_api: str
+    sensor_status_api_key: str
     stream_host: str
     stream_port: int
     model_path: str
@@ -31,6 +32,7 @@ def load_settings() -> Settings:
         esp32_port=os.getenv("ESP32_PORT", "COM5"),
         esp32_baud=int(os.getenv("ESP32_BAUD", "115200")),
         sensor_status_api=os.getenv("SENSOR_STATUS_API", "http://127.0.0.1:3000/api/sensor-status"),
+        sensor_status_api_key=os.getenv("SENSOR_STATUS_API_KEY", ""),
         stream_host=os.getenv("STREAM_HOST", "0.0.0.0"),
         stream_port=int(os.getenv("STREAM_PORT", "5001")),
         model_path=os.getenv("MODEL_PATH", "models/best.pt"),

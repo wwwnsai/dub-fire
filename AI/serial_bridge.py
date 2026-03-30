@@ -114,10 +114,14 @@ class ESP32Bridge:
             "source": self.snapshot.source,
         }
 
+        headers: dict = {"Content-Type": "application/json"}
+        if self.settings.sensor_status_api_key:
+            headers["Authorization"] = f"Bearer {self.settings.sensor_status_api_key}"
+
         request = urllib.request.Request(
             self.settings.sensor_status_api,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
 

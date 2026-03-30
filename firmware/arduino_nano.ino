@@ -1,4 +1,5 @@
-// code for entire system here #include <Wire.h>
+// code for entire system here
+#include <Wire.h>
 #include <MPU6050.h>
 #include "SHTC3.h"
 #include <math.h>
