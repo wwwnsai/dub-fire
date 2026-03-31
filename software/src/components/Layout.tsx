@@ -1,4 +1,4 @@
-// "use client";
+"use client";
 
 // components/Layout.tsx
 import { ReactNode } from "react";
