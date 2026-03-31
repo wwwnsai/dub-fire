@@ -1,6 +1,7 @@
 import { InfoItem } from "../../lib/types";
 import { useEffect, useState } from "react";
 import RemoveTextButton from "../buttons/RemoveTextButton";
+import NotiReqSwitchButton from "../buttons/NotiReqSwitchButton";
 
 export default function Card({
   infoData,
@@ -34,7 +35,7 @@ export default function Card({
               {item.title}
             </div>
 
-            {/* Editable */}
+            {/* Right Side */}
             {item.editable ? (
               <div className="w-full flex justify-end gap-2 items-center">
                 
@@ -65,6 +66,8 @@ export default function Card({
                   }}
                 />
               </div>
+            ) : item.title === "Enable Notification" ? (
+              <NotiReqSwitchButton />
             ) : (
               <div className="text-sm sen-semibold text-text-secondary">
                 {infoDescriptions[index]}

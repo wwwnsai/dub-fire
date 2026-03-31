@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { FireStatusProvider } from "@/lib/fireStatusContext";
 import EmailEventListenerProvider from "@/components/EmailEventListenerProvider";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import Pwa from "@/components/Pwa";
 
 export const metadata: Metadata = {
   title: "Fire Alert Dashboard",
@@ -36,7 +36,7 @@ export default function RootLayout({
           <EmailEventListenerProvider />
           
           {/* ✅ client-only logic here */}
-          <ServiceWorkerRegister />
+          <Pwa />
 
           <main className="min-h-screen">{children}</main>
         </FireStatusProvider>

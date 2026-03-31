@@ -1,4 +1,4 @@
-"use client";
+// "use client";
 
 // components/Layout.tsx
 import { ReactNode } from "react";
@@ -35,7 +35,7 @@ const Layout = ({ children }: LayoutProps) => {
         console.error("Error getting session:", sessionError.message);
       } else if (session) {
         const currentUser = session.user;
-        console.log("Current User:", currentUser);
+        // console.log("Current User:", currentUser);
         setUser(currentUser);
 
         const { data: profileData, error: profileError } = await supabase
@@ -47,7 +47,7 @@ const Layout = ({ children }: LayoutProps) => {
         if (profileError) {
           console.error("Profile Error:", profileError.message);
         } else {
-          console.log("Profile Data:", profileData);
+          // console.log("Profile Data:", profileData);
           setProfile(profileData);
         }
       }

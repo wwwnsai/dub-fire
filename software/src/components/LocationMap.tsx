@@ -88,7 +88,6 @@ export default function LocationMap({
       ]);
       map.fitBounds(bounds, { padding: [50, 50] });
     } else {
-      // If no fire locations, use a detailed zoom level
       map.setView([latitude, longitude], MAP_CONFIG.DETAILED_ZOOM);
     }
 
