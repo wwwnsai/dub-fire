@@ -49,6 +49,11 @@ export const GEOLOCATION_CONFIG = {
   MAXIMUM_AGE: 0,
 } as const;
 
+export const FIRE_LOCATION = {
+  lat: 13.729418,
+  lng: 100.775325,
+};
+
 export const API_ENDPOINTS = {
   FIRE_ALERT: "/api/fire-alert",
 } as const;

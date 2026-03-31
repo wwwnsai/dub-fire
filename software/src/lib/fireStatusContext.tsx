@@ -3,201 +3,127 @@
 import React, {
   createContext,
   useContext,
+  useEffect,
   useState,
   ReactNode,
-  useCallback,
-  useEffect,
   useRef,
 } from "react";
-import { FireLocation, SafetyStatus } from "./types";
-import {
-  hasActiveFire,
-  generateLocationId,
-  severityToFireStatus,
-} from "./utils";
-import { eventBus } from "./eventBus";
+import { supabase } from "@/lib/supabaseClient";
+import {FIRE_LOCATION }from "@/lib/constants";
+
+export type FireLocation = {
+  lat: number;
+  lng: number;
+  name: string;
+  severity: "high" | "non-fire";
+};
 
 interface FireStatusContextType {
   fireLocations: FireLocation[];
-  setFireLocations: React.Dispatch<React.SetStateAction<FireLocation[]>>;
-  getCurrentFireStatus: () => SafetyStatus;
-  addFireLocation: (location: FireLocation) => void;
-  updateFireLocation: (id: string, updates: Partial<FireLocation>) => void;
-  removeFireLocation: (id: string) => void;
-  clearAllFireLocations: () => void;
+  isSafe: boolean;
 }
 
 const FireStatusContext = createContext<FireStatusContextType | undefined>(
   undefined
 );
 
-// Default fire location for ECC
-const DEFAULT_STATUS: FireLocation[] = [
-  {
-    lat: 13.729418,
-    lng: 100.775325,
-    name: "Fire Detected",
-    severity: "non-fire",
-  },
-];
-
-// Mock fire location for ECC
 export function FireStatusProvider({ children }: { children: ReactNode }) {
-  const [fireLocations, setFireLocations] =
-    useState<FireLocation[]>(DEFAULT_STATUS);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [fireLocations, setFireLocations] = useState<FireLocation[]>([]);
+  const [isSafe, setIsSafe] = useState(true);
 
-  // Track previous severities to detect changes
-  const previousSeveritiesRef = useRef<Record<string, "fire" | "non-fire">>({});
+  const lastStatusRef = useRef<string | null>(null);
 
-  // Load status from JSON file on mount
+  // 🔥 INITIAL LOAD
   useEffect(() => {
-    const loadStatusFromFile = async () => {
-      try {
-        const response = await fetch("/api/fire-status");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.fireLocations && Array.isArray(data.fireLocations)) {
-            setFireLocations(data.fireLocations);
-            // Initialize previous severities
-            data.fireLocations.forEach((location: FireLocation) => {
-              const locationId = generateLocationId(location.lat, location.lng);
-              previousSeveritiesRef.current[locationId] = severityToFireStatus(
-                location.severity
-              );
+    async function loadInitial() {
+      const { data } = await supabase
+        .from("fire_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!data) return;
+
+      if (data.status === "fire") {
+        setFireLocations([
+          {
+            lat: FIRE_LOCATION.lat,
+            lng: FIRE_LOCATION.lng,
+            name: "🔥 Fire Detected",
+            severity: "high",
+          },
+        ]);
+      } else {
+        setFireLocations([]);
+      }
+      
+      setIsSafe(data.status === "non-fire");
+      lastStatusRef.current = data.status;
+    }
+
+    loadInitial();
+  }, []);
+
+  // 🔥 REALTIME LISTENER
+  useEffect(() => {
+    const channel = supabase
+      .channel("fire-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "fire_logs",
+        },
+        async (payload) => {
+          const newLog = payload.new;
+
+          console.log("🔥 REALTIME FIRE LOG:", newLog);
+
+          const location: FireLocation = {
+            lat: newLog.lat,
+            lng: newLog.lng,
+            name:
+              newLog.status === "fire"
+                ? "🔥 Fire Detected"
+                : "🧯 Fire Cleared",
+            severity: newLog.status === "fire" ? "high" : "non-fire",
+          };
+
+          setFireLocations([location]);
+          setIsSafe(newLog.status === "non-fire");
+
+          // 🚨 PREVENT DUPLICATE NOTI
+          if (lastStatusRef.current !== newLog.status) {
+            lastStatusRef.current = newLog.status;
+
+            await fetch("/api/push-noti", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title:
+                  newLog.status === "fire"
+                    ? "🔥 Fire Alert"
+                    : "🧯 Safe",
+                body:
+                  newLog.status === "fire"
+                    ? "Fire detected!"
+                    : "Fire extinguished",
+              }),
             });
           }
         }
-      } catch (error) {
-        console.error("Error loading fire status from file:", error);
-        // Use default status if loading fails
-        setFireLocations(DEFAULT_STATUS);
-      } finally {
-        setIsLoaded(true);
-      }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    loadStatusFromFile();
   }, []);
-
-  // Save status to JSON file whenever it changes (after initial load)
-  useEffect(() => {
-    if (!isLoaded) return; // Don't save on initial load
-
-    const saveStatusToFile = async () => {
-      try {
-        await fetch("/api/fire-status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ fireLocations }),
-        });
-      } catch (error) {
-        console.error("Error saving fire status to file:", error);
-      }
-    };
-
-    saveStatusToFile();
-  }, [fireLocations, isLoaded]);
-
-  const getCurrentFireStatus = useCallback((): SafetyStatus => {
-    return hasActiveFire(fireLocations) ? "alert" : "safe";
-  }, [fireLocations]);
-
-  // Emit events when fire locations change
-  useEffect(() => {
-    if (fireLocations.length === 0) return;
-
-    fireLocations.forEach((location) => {
-      const locationId = generateLocationId(location.lat, location.lng);
-      const currentStatus = severityToFireStatus(location.severity);
-      const previousStatus = previousSeveritiesRef.current[locationId];
-
-      // Only emit if status changed
-      if (previousStatus !== undefined && previousStatus !== currentStatus) {
-        // Emit fire status change event
-        eventBus.emit("fire:status-changed", {
-          locationId,
-          fromStatus: previousStatus,
-          toStatus: currentStatus,
-          location: {
-            lat: location.lat,
-            lng: location.lng,
-            name: location.name,
-            severity: location.severity,
-          },
-        });
-      }
-
-      // Update previous status
-      previousSeveritiesRef.current[locationId] = currentStatus;
-    });
-  }, [fireLocations]);
-
-  const addFireLocation = useCallback((location: FireLocation) => {
-    setFireLocations((prev) => {
-      const newLocations = [...prev, location];
-      // Emit event for new location
-      eventBus.emit("fire:location-added", {
-        location,
-      });
-      return newLocations;
-    });
-  }, []);
-
-  const updateFireLocation = useCallback(
-    (id: string, updates: Partial<FireLocation>) => {
-      setFireLocations((prev) => {
-        const updated = prev.map((location) => {
-          const locationId = generateLocationId(location.lat, location.lng);
-          if (locationId === id) {
-            return { ...location, ...updates };
-          }
-          return location;
-        });
-        // Emit event for location update
-        eventBus.emit("fire:location-updated", {
-          locationId: id,
-          updates,
-        });
-        return updated;
-      });
-    },
-    []
-  );
-
-  const removeFireLocation = useCallback((id: string) => {
-    setFireLocations((prev) => {
-      const removed = prev.filter(
-        (location) => generateLocationId(location.lat, location.lng) !== id
-      );
-      // Emit event for location removal
-      eventBus.emit("fire:location-removed", {
-        locationId: id,
-      });
-      return removed;
-    });
-  }, []);
-
-  const clearAllFireLocations = useCallback(() => {
-    setFireLocations([]);
-    previousSeveritiesRef.current = {};
-    eventBus.emit("fire:all-cleared", {});
-  }, []);
-
-  const value: FireStatusContextType = {
-    fireLocations,
-    setFireLocations,
-    getCurrentFireStatus,
-    addFireLocation,
-    updateFireLocation,
-    removeFireLocation,
-    clearAllFireLocations,
-  };
 
   return (
-    <FireStatusContext.Provider value={value}>
+    <FireStatusContext.Provider value={{ fireLocations, isSafe }}>
       {children}
     </FireStatusContext.Provider>
   );
@@ -205,8 +131,8 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
 
 export function useFireStatus() {
   const context = useContext(FireStatusContext);
-  if (context === undefined) {
-    throw new Error("useFireStatus must be used within a FireStatusProvider");
+  if (!context) {
+    throw new Error("useFireStatus must be used inside provider");
   }
   return context;
 }
