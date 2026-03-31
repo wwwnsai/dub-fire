@@ -1,13 +1,26 @@
 import webpush from "web-push";
 import { supabase } from "@/lib/supabaseClient";
 
-webpush.setVapidDetails(
-  "mailto:your@email.com",
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+function configureWebPush() {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+
+  if (!publicKey || !privateKey) {
+    return false;
+  }
+
+  webpush.setVapidDetails("mailto:your@email.com", publicKey, privateKey);
+  return true;
+}
 
 export async function POST(req: Request) {
+  if (!configureWebPush()) {
+    return Response.json(
+      { success: false, error: "VAPID keys are not configured" },
+      { status: 503 }
+    );
+  }
+
   const { title, body } = await req.json();
 
   const { data: subs, error } = await supabase

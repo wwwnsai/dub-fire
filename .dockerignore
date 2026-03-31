@@ -1,0 +1,12 @@
+.git
+.gitignore
+**/__pycache__
+**/.next
+**/node_modules
+**/playwright-report
+**/test-results
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.DS_Store
+software/public/sensor-status.json
