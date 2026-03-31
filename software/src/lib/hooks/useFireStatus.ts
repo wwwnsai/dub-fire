@@ -63,6 +63,16 @@ export function useFireStatus() {
 
     setIsSafe(newIsSafe);
 
+    await fetch("/api/fire-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status: newStatus,
+      }),
+    });
+    
     // log 
     await supabase.from("fire_logs").insert({
       status: newStatus,
@@ -78,6 +88,7 @@ export function useFireStatus() {
         updated_at: new Date(),
       })
       .eq("id", fireId);
+
 
     if (error) {
       console.error("❌ update error:", error);

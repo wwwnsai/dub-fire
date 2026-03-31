@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       { status: 503 }
     );
   }
-
+  console.log("🚀 PUSH API CALLED");
   const { title, body } = await req.json();
 
   const { data: subs, error } = await supabase

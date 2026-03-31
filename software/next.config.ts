@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
 };
 
+export default nextConfig;
+
 // export default withPWA({
 //   dest: "public",
 //   disable: !isProd,

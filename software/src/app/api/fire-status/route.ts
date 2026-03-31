@@ -94,6 +94,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function POST(req: Request) {
   const { status } = await req.json();
+  console.log("🔥 fire-status API CALLED WITH STATUS:", status);
 
   // insert log
   await supabase.from("fire_logs").insert({
@@ -119,6 +120,7 @@ export async function POST(req: Request) {
       : "Fire has been extinguished";
 
   await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/push-noti`, {
+  // await fetch("/api/push-noti", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
