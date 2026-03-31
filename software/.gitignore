@@ -45,3 +45,8 @@ next-env.d.ts
 /public/workbox-*.js
 /public/worker.js
 /public/worker-development.js
+
+
+/AI/__pycache__/
+/AI/*.pyc
+
