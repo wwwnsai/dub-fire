@@ -1,14 +1,30 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { eventBus } from "@/lib/eventBus";
-import { sendFireAlert, sendSafeAlert } from "../lineNotiService";
+
+export type FireLocation = {
+  lat: number;
+  lng: number;
+  name: string;
+  severity: "high";
+};
 
 export function useFireStatus() {
   const [isSafe, setIsSafe] = useState(true);
   const [fireId, setFireId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fireLocations, setFireLocations] = useState<FireLocation[]>([]);
 
-  // fetch initial
+  // 📌 FIXED LOCATION (you can make dynamic later)
+  const LOCATION = {
+    lat: 13.729418,
+    lng: 100.775325,
+    name: "ECC-806",
+  };
+
+  // 🔹 INITIAL LOAD
   useEffect(() => {
     async function fetchStatus() {
       const { data, error } = await supabase
@@ -21,7 +37,20 @@ export function useFireStatus() {
         console.error("❌ fetch error:", error);
       } else {
         setFireId(data.id);
-        setIsSafe(data.status === "non-fire");
+
+        const isFire = data.status === "fire";
+
+        setIsSafe(!isFire);
+
+        if (isFire) {
+          setFireLocations([
+            {
+              ...LOCATION,
+              name: "🔥 Fire Detected",
+              severity: "high",
+            },
+          ]);
+        }
       }
 
       setLoading(false);
@@ -30,7 +59,7 @@ export function useFireStatus() {
     fetchStatus();
   }, []);
 
-  // realtime sync
+  // 🔥 REALTIME LISTENER (MAIN DRIVER)
   useEffect(() => {
     const channel = supabase
       .channel("fire-status-channel")
@@ -44,42 +73,69 @@ export function useFireStatus() {
         (payload) => {
           const newStatus = payload.new.status;
           const oldStatus = payload.old.status;
+
           console.log("🔥 REALTIME:", newStatus);
 
-          setIsSafe(newStatus === "non-fire");
+          const isFire = newStatus === "fire";
 
-          // EMIT EVENT FOR NOTIFICATION
+          // ✅ update UI
+          setIsSafe(!isFire);
+
+          if (isFire) {
+            setFireLocations([
+              {
+                ...LOCATION,
+                name: "🔥 Fire Detected",
+                severity: "high",
+              },
+            ]);
+          } else {
+            setFireLocations([]);
+          }
+
+          // 🔔 notification
           if (newStatus !== oldStatus) {
             eventBus.emit("fire:status-changed", {
               fromStatus: oldStatus,
               toStatus: newStatus,
-              location: {
-                lat: 13.729418,
-                lng: 100.775325,
-                name: "ECC-806",
-              },
+              location: LOCATION,
             });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("📡 SUB:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  // toggle 
+  // 🔘 TOGGLE
   async function toggleFire() {
     if (!fireId) return;
 
     const newIsSafe = !isSafe;
     const newStatus = newIsSafe ? "non-fire" : "fire";
 
+    // ⚡ instant UI update (optional but smooth)
     setIsSafe(newIsSafe);
 
+    if (!newIsSafe) {
+      setFireLocations([
+        {
+          ...LOCATION,
+          name: "🔥 Fire Detected",
+          severity: "high",
+        },
+      ]);
+    } else {
+      setFireLocations([]);
+    }
+
     try {
-      const res = await fetch("/api/fire-status", {
+      await fetch("/api/fire-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -89,49 +145,10 @@ export function useFireStatus() {
           fireId,
         }),
       });
-
-      const data = await res.json();
-      console.log("✅ API fire-status RESPONSE:", data);
     } catch (err) {
-      console.error("🔥 API fire-status ERROR:", err);
+      console.error("🔥 API ERROR:", err);
     }
-
-    // // log 
-    // await supabase.from("fire_logs").insert({
-    //   status: newStatus,
-    //   lat: 13.729418,
-    //   lng: 100.775325,
-    // });
-
-    // // update current state
-    // const { error } = await supabase
-    //   .from("fire_status")
-    //   .update({
-    //     status: newStatus,
-    //     updated_at: new Date(),
-    //   })
-    //   .eq("id", fireId);
-
-    // instant bell
-    eventBus.emit("fire:status-changed", {
-      fromStatus: isSafe ? "non-fire" : "fire",
-      toStatus: newStatus,
-      location: {
-        lat: 13.729418,
-        lng: 100.775325,
-        name: "ECC-806",
-      },
-    });
-
-      // if (newStatus === "fire") {
-      //   await sendFireAlert();
-      // } else {
-      //   await sendSafeAlert();
-      // }
-
-
-    // if (error/api/fire-status
   }
 
-  return { isSafe, toggleFire, loading };
+  return { isSafe, toggleFire, loading, fireLocations };
 }

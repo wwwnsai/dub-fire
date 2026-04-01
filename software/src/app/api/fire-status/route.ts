@@ -6,11 +6,15 @@ export async function POST(req: Request) {
     console.log("🔥 fire-status API:", status);
 
     // insert log
-    await supabase.from("fire_logs").insert({
+    const { error } = await supabase.from("fire_logs").insert({
       status,
       lat: 13.729418,
       lng: 100.775325,
     });
+
+    if (error) {
+      console.error("❌ insert error:", error);
+    }
 
     // update current
     await supabase

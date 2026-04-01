@@ -12,7 +12,6 @@ import {
   formatTimestamp,
 } from "@/lib/utils";
 import Card from "@/components/cards/Card";
-import { requestLocationPermission } from "@/lib/locationService";
 
 const MapWithNoSSR = dynamic(() => import("@/components/LocationMap"), {
   ssr: false,
@@ -24,9 +23,9 @@ export default function MapPage() {
   const [error, setError] = useState<string | null>(null);
   const [mapUrl, setMapUrl] = useState("");
 
-  const { fireLocations } = useFireStatus();
+  const { fireLocations, version } = useFireStatus();
 
-  // Request permission + get location
+  // 📍 Get location
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -64,7 +63,6 @@ export default function MapPage() {
     <Layout>
       <div className="mt-2 space-y-4">
 
-        {/* Loading */}
         {isLoading && (
           <div className="flex flex-col items-center py-10">
             <Loader2 className="animate-spin w-10 h-10" />
@@ -72,7 +70,6 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="bg-red-100 p-4 rounded-lg flex items-center gap-2">
             <AlertCircle />
@@ -80,12 +77,12 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Map */}
         {userLocation && (
           <>
             <div className="bg-white rounded-xl overflow-hidden shadow">
               <div className="aspect-video">
                 <MapWithNoSSR
+                  key={version}
                   latitude={userLocation.lat}
                   longitude={userLocation.lng}
                   fireLocations={fireLocations}

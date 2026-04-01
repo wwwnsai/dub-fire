@@ -9,18 +9,21 @@ import React, {
   useRef,
 } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import {FIRE_LOCATION }from "@/lib/constants";
+import { FIRE_LOCATION } from "@/lib/constants";
+import { eventBus } from "@/lib/eventBus";
 
 export type FireLocation = {
   lat: number;
   lng: number;
   name: string;
   severity: "high" | "non-fire";
+  
 };
 
 interface FireStatusContextType {
   fireLocations: FireLocation[];
   isSafe: boolean;
+  version: number;
 }
 
 const FireStatusContext = createContext<FireStatusContextType | undefined>(
@@ -33,7 +36,9 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
 
   const lastStatusRef = useRef<string | null>(null);
 
-  // INITIAL 
+  const [version, setVersion] = useState(0);
+
+  // 🔹 INITIAL LOAD
   useEffect(() => {
     async function loadInitial() {
       const { data } = await supabase
@@ -45,9 +50,11 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
 
       if (!data) return;
 
-      setIsSafe(data.status === "non-fire");
+      const isFire = data.status === "fire";
 
-      if (data.status === "fire") {
+      setIsSafe(!isFire);
+
+      if (isFire) {
         setFireLocations([
           {
             lat: FIRE_LOCATION.lat,
@@ -57,16 +64,16 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
           },
         ]);
       } else {
-        setFireLocations([]);
+        setFireLocations([]); // ✅ no marker when safe
       }
-  
+
       lastStatusRef.current = data.status;
     }
 
     loadInitial();
   }, []);
 
-  // REALTIME LISTENER
+  // 🔥 REALTIME LISTENER
   useEffect(() => {
     const channel = supabase
       .channel("fire-realtime")
@@ -77,37 +84,45 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
           schema: "public",
           table: "fire_logs",
         },
-        async (payload) => {
+        (payload) => {
           const newLog = payload.new;
+          const newStatus = newLog.status;
 
-          console.log("🔥 REALTIME FIRE LOG:", newLog);
+          console.log("🔥 REALTIME FIRE LOG:", newStatus);
 
-          setIsSafe(newLog.status === "non-fire");
+          const isFire = newStatus === "fire";
 
-          setFireLocations((prev) => {
-            if (newLog.status === "fire") {
-              return [
-                {
-                  lat: newLog.lat,
-                  lng: newLog.lng,
-                  name: "🔥 Fire Detected",
-                  severity: "high",
-                },
-              ];
-            }
-            return [
-              { 
-                lat: newLog.lat, 
-                lng: newLog.lng, 
-                name: "🧯 Fire Cleared", 
-                severity: "non-fire" 
+          setIsSafe(!isFire);
+
+          if (isFire) {
+            const location: FireLocation = {
+              lat: newLog.lat,
+              lng: newLog.lng,
+              name: "🔥 Fire Detected",
+              severity: "high",
+            };
+
+            setFireLocations([location]);
+          } else {
+            setFireLocations([]);
+          }
+
+          // 🔥 FORCE UI UPDATE
+          setVersion((v) => v + 1);
+
+          // EMIT EVENT FOR NOTIFICATION
+          if (lastStatusRef.current !== newStatus) {
+            eventBus.emit("fire:status-changed", {
+              fromStatus: lastStatusRef.current,
+              toStatus: newStatus,
+              location: {
+                lat: newLog.lat,
+                lng: newLog.lng,
+                name: "ECC-806",
               },
-            ];
-          });
+            });
 
-          // PREVENT DUPLICATE NOTI
-          if (lastStatusRef.current !== newLog.status) {
-            lastStatusRef.current = newLog.status;
+            lastStatusRef.current = newStatus;
           }
         }
       )
@@ -119,7 +134,7 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <FireStatusContext.Provider value={{ fireLocations, isSafe }}>
+    <FireStatusContext.Provider value={{ fireLocations, isSafe, version }}>
       {children}
     </FireStatusContext.Provider>
   );
