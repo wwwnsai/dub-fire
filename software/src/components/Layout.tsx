@@ -1,38 +1,30 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import NotificationBadge, { Notification } from "./NotificationBadge";
+import { ReactNode, useEffect, useRef } from "react";
+import NotificationBadge from "./NotificationBadge";
 import BottomNav from "./BottomNav";
-import { supabase } from "@/lib/supabaseClient";
-import { Profile } from "@/lib/types/users";
 import { eventBus } from "@/lib/eventBus";
+import { useNotificationStore } from "@/lib/store/useNotificationStore";
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, add, setAll } = useNotificationStore();
+  const lastMessageRef = useRef("");
+
+  // Load from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("notifications");
+    if (saved) {
+      setAll(JSON.parse(saved));
+    }
+  }, [setAll]);
 
   // Handle notifications
   useEffect(() => {
-    let lastMessage = "";
-
-    function addNotification(message: string, type: Notification["type"]) {
-      if (message === lastMessage) return;
-      lastMessage = message;
-
-      const newNoti: Notification = {
-        id: `${Date.now()}-${Math.random()}`,
-        message,
-        timestamp: new Date().toISOString(),
-        type,
-      };
-
-      setNotifications((prev) => [newNoti, ...prev].slice(0, 50));
-    }
-
-    const handleStatusChange = (event: any) => {
+    function handleStatusChange(event: any) {
       const { fromStatus, toStatus, location } = event;
 
       if (fromStatus === toStatus) return;
@@ -44,15 +36,23 @@ export default function Layout({ children }: LayoutProps) {
           ? `🔥 Fire detected at ${locationName}`
           : `✅ Fire cleared at ${locationName}`;
 
-      addNotification(message, "status-change");
-    };
+      if (message === lastMessageRef.current) return;
+      lastMessageRef.current = message;
+
+      add({
+        id: `${Date.now()}-${Math.random()}`,
+        message,
+        timestamp: new Date().toISOString(),
+        type: "status-change",
+      });
+    }
 
     eventBus.on("fire:status-changed", handleStatusChange);
 
     return () => {
       eventBus.off("fire:status-changed", handleStatusChange);
     };
-  }, []);
+  }, [add]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background-light">

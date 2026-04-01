@@ -93,6 +93,7 @@ export default function Page() {
                   src={profile?.avatar_url || pfp}
                   alt="pfp"
                   fill
+                  sizes=""
                   className="object-cover"
                 />
               </div>

@@ -26,7 +26,8 @@
     "react-leaflet": "^5.0.0",
     "react-toastify": "^11.0.5",
     "resend": "^6.2.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
