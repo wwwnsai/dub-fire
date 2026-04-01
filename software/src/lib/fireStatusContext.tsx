@@ -33,7 +33,7 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
 
   const lastStatusRef = useRef<string | null>(null);
 
-  // 🔥 INITIAL LOAD
+  // INITIAL 
   useEffect(() => {
     async function loadInitial() {
       const { data } = await supabase
@@ -44,6 +44,8 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (!data) return;
+
+      setIsSafe(data.status === "non-fire");
 
       if (data.status === "fire") {
         setFireLocations([
@@ -57,15 +59,14 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
       } else {
         setFireLocations([]);
       }
-      
-      setIsSafe(data.status === "non-fire");
+  
       lastStatusRef.current = data.status;
     }
 
     loadInitial();
   }, []);
 
-  // 🔥 REALTIME LISTENER
+  // REALTIME LISTENER
   useEffect(() => {
     const channel = supabase
       .channel("fire-realtime")
@@ -81,37 +82,32 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
 
           console.log("🔥 REALTIME FIRE LOG:", newLog);
 
-          const location: FireLocation = {
-            lat: newLog.lat,
-            lng: newLog.lng,
-            name:
-              newLog.status === "fire"
-                ? "🔥 Fire Detected"
-                : "🧯 Fire Cleared",
-            severity: newLog.status === "fire" ? "high" : "non-fire",
-          };
-
-          setFireLocations([location]);
           setIsSafe(newLog.status === "non-fire");
 
-          // 🚨 PREVENT DUPLICATE NOTI
+          setFireLocations((prev) => {
+            if (newLog.status === "fire") {
+              return [
+                {
+                  lat: newLog.lat,
+                  lng: newLog.lng,
+                  name: "🔥 Fire Detected",
+                  severity: "high",
+                },
+              ];
+            }
+            return [
+              { 
+                lat: newLog.lat, 
+                lng: newLog.lng, 
+                name: "🧯 Fire Cleared", 
+                severity: "non-fire" 
+              },
+            ];
+          });
+
+          // PREVENT DUPLICATE NOTI
           if (lastStatusRef.current !== newLog.status) {
             lastStatusRef.current = newLog.status;
-
-            await fetch("/api/push-noti", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                title:
-                  newLog.status === "fire"
-                    ? "🔥 Fire Alert"
-                    : "🧯 Safe",
-                body:
-                  newLog.status === "fire"
-                    ? "Fire detected!"
-                    : "Fire extinguished",
-              }),
-            });
           }
         }
       )
