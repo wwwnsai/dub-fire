@@ -17,14 +17,14 @@ export function useFireStatus() {
   const [loading, setLoading] = useState(true);
   const [fireLocations, setFireLocations] = useState<FireLocation[]>([]);
 
-  // 📌 FIXED LOCATION (you can make dynamic later)
+  // FIXED LOCATION (you can make dynamic later)
   const LOCATION = {
     lat: 13.729418,
     lng: 100.775325,
     name: "ECC-806",
   };
 
-  // 🔹 INITIAL LOAD
+  // INITIAL LOAD
   useEffect(() => {
     async function fetchStatus() {
       const { data, error } = await supabase
@@ -59,7 +59,7 @@ export function useFireStatus() {
     fetchStatus();
   }, []);
 
-  // 🔥 REALTIME LISTENER (MAIN DRIVER)
+  // REALTIME LISTENER (MAIN DRIVER)
   useEffect(() => {
     const channel = supabase
       .channel("fire-status-channel")
@@ -78,7 +78,6 @@ export function useFireStatus() {
 
           const isFire = newStatus === "fire";
 
-          // ✅ update UI
           setIsSafe(!isFire);
 
           if (isFire) {
@@ -93,7 +92,7 @@ export function useFireStatus() {
             setFireLocations([]);
           }
 
-          // 🔔 notification
+          // bell notification
           if (newStatus !== oldStatus) {
             eventBus.emit("fire:status-changed", {
               fromStatus: oldStatus,
@@ -112,14 +111,14 @@ export function useFireStatus() {
     };
   }, []);
 
-  // 🔘 TOGGLE
+  // TOGGLE
   async function toggleFire() {
     if (!fireId) return;
 
     const newIsSafe = !isSafe;
     const newStatus = newIsSafe ? "non-fire" : "fire";
 
-    // ⚡ instant UI update (optional but smooth)
+    // instant UI update (optional but smooth)
     setIsSafe(newIsSafe);
 
     if (!newIsSafe) {

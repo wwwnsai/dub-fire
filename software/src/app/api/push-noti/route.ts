@@ -20,7 +20,6 @@ export async function POST(req: Request) {
       { status: 503 }
     );
   }
-  console.log("🚀 PUSH API CALLED");
   const { title, body } = await req.json();
 
   const { data: subs, error } = await supabase
@@ -39,13 +38,6 @@ export async function POST(req: Request) {
 
   
   if (subs) {
-    console.log(
-      "📦 SUBS:",
-      subs.map((s) => ({
-        user_id: s.user_id,
-        push_noti: (s.profiles as any)?.push_noti,
-      }))
-    );
     await Promise.all(
       subs.map(async (sub) => {
         try {

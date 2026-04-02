@@ -38,7 +38,7 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
 
   const [version, setVersion] = useState(0);
 
-  // 🔹 INITIAL LOAD
+  // INITIAL LOAD
   useEffect(() => {
     async function loadInitial() {
       const { data } = await supabase
@@ -64,7 +64,7 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
           },
         ]);
       } else {
-        setFireLocations([]); // ✅ no marker when safe
+        setFireLocations([]); 
       }
 
       lastStatusRef.current = data.status;
@@ -73,7 +73,7 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
     loadInitial();
   }, []);
 
-  // 🔥 REALTIME LISTENER
+  // REALTIME LISTENER
   useEffect(() => {
     const channel = supabase
       .channel("fire-realtime")
@@ -107,7 +107,6 @@ export function FireStatusProvider({ children }: { children: ReactNode }) {
             setFireLocations([]);
           }
 
-          // 🔥 FORCE UI UPDATE
           setVersion((v) => v + 1);
 
           // EMIT EVENT FOR NOTIFICATION

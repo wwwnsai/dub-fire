@@ -24,6 +24,6 @@ export async function sendSafeAlert() {
   await fetch("/api/line-group", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: "🧯 ดับไฟแล้ว ปลอดภัยแล้ว" }),
+    body: JSON.stringify({ message: "🧯 ดับไฟแล้วจ้า" }),
   });
 }

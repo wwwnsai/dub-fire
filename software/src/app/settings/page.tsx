@@ -29,7 +29,6 @@ export default function Page() {
     confirm: "",
   });
 
-  // 👇 memo clean
   const profileInfo = useMemo(() => [
     {
       title: "Username",
@@ -43,7 +42,6 @@ export default function Page() {
     },
   ], [loading, profile, user]);
 
-  // ✅ SAVE LOGIC (cleaned)
   async function handleSave() {
     if (!user) return;
 
