@@ -45,7 +45,6 @@ export async function requestNotificationPermission() {
 
     const registration = await navigator.serviceWorker.ready;
 
-    // reuse existing subscription
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
@@ -56,8 +55,6 @@ export async function requestNotificationPermission() {
         ),
       });
     }
-
-    console.log("✅ Subscribed:", subscription);
 
     const subJson = subscription.toJSON();
 
