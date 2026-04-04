@@ -1,6 +1,16 @@
-List
-- ESP 32
-- ESP 32 CAM
--
--
--
+Hardware Components List
+- ESP32 DevKit v1 (main controller)
+- Arduino Nano (sensor node)
+- MPU6050 (6-axis IMU)
+- SHTC3 (temperature & humidity sensor)
+- TOF range sensor (distance measurement)
+- RGB USB camera (fire detection)
+- Thermal USB camera (heat confirmation)
+- Pan servo motor (continuous rotation)
+- Tilt servo motor (positional)
+- ESC x2 (weapon/suppressor control)
+- Joystick (manual pan/tilt input)
+- Push button (arm/disarm control)
+- Relay modules x3
+- Voltage regulators
+- MOSFETs / logic level shifters

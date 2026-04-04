@@ -1,0 +1,175 @@
+<mxfile host="app.diagrams.net" modified="2026-04-04T00:00:00.000Z" agent="Claude Code" version="21.7.5" type="device">
+  <diagram id="dubfire-arch" name="DUB-FIRE Architecture">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== TITLE ===== -->
+        <mxCell id="2" value="DUB-FIRE System Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="15" width="440" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===== SUPABASE ===== -->
+        <mxCell id="10" value="&lt;b&gt;Supabase&lt;/b&gt;&lt;br&gt;PostgreSQL + Auth + Realtime&lt;br&gt;&lt;font style=&apos;font-size:10px&apos;&gt;profiles &amp;middot; email_subs &amp;middot; push_subs &amp;middot; line_groups&lt;/font&gt;" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#3ECF8E;strokeColor=#2DA44E;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="660" y="55" width="200" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ===== MOBILE WEB APP (swimlane) ===== -->
+        <mxCell id="20" value="Mobile Web App" style="swimlane;fontStyle=1;align=center;startSize=40;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontColor=#1D4ED8;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="195" width="560" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="20s" value="Next.js 15 + TypeScript &amp;nbsp;&amp;middot;&amp;nbsp; Docker &amp;nbsp;&amp;middot;&amp;nbsp; port 3000" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#6B7280;" vertex="1" parent="20">
+          <mxGeometry x="0" y="40" width="560" height="18" as="geometry" />
+        </mxCell>
+
+        <!-- Frontend sub-box -->
+        <mxCell id="21" value="&lt;b&gt;Frontend&lt;/b&gt;&lt;br&gt;Next.js 15 (App Router) &amp;middot; React 19&lt;br&gt;TypeScript &amp;middot; Tailwind CSS 3&lt;br&gt;&lt;hr/&gt;&lt;b&gt;Pages&lt;/b&gt;&lt;br&gt;Camera &amp;mdash; live stream + controls&lt;br&gt;Map &amp;mdash; Leaflet + fire markers&lt;br&gt;Home / Profile / Settings&lt;br&gt;&lt;hr/&gt;&lt;b&gt;Libraries&lt;/b&gt;&lt;br&gt;Leaflet + react-leaflet (maps)&lt;br&gt;Zustand (state management)&lt;br&gt;Web Push API + Service Worker&lt;br&gt;EventBus (pub/sub fire events)&lt;br&gt;next-pwa &amp;middot; next-themes&lt;br&gt;Supabase JS (realtime sync)&lt;br&gt;Playwright (E2E testing)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#EFF6FF;strokeColor=#93C5FD;fontSize=10;align=center;" vertex="1" parent="20">
+          <mxGeometry x="20" y="62" width="240" height="345" as="geometry" />
+        </mxCell>
+
+        <!-- Backend sub-box -->
+        <mxCell id="22" value="&lt;b&gt;Backend API Routes&lt;/b&gt;&lt;br&gt;Next.js API Routes&lt;br&gt;&lt;hr/&gt;&lt;b&gt;Endpoints&lt;/b&gt;&lt;br&gt;/api/fire-status&lt;br&gt;/api/sensor-status&lt;br&gt;/api/push-noti &amp;middot; /api/subscribe&lt;br&gt;/api/line-noti &amp;middot; /api/line-group&lt;br&gt;/api/webhook (LINE handler)&lt;br&gt;&lt;hr/&gt;&lt;b&gt;Services&lt;/b&gt;&lt;br&gt;lineNotiService&lt;br&gt;pushNotiService (VAPID)&lt;br&gt;emailService (SendGrid / Resend)&lt;br&gt;supabaseClient (DB queries)&lt;br&gt;locationService (geolocation)&lt;br&gt;FireStatusContext (global state)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FFF7ED;strokeColor=#FCD34D;fontSize=10;align=center;" vertex="1" parent="20">
+          <mxGeometry x="300" y="62" width="240" height="345" as="geometry" />
+        </mxCell>
+
+        <!-- ===== NOTIFICATION SERVICES ===== -->
+        <mxCell id="50" value="&lt;b&gt;LINE Messaging&lt;/b&gt;&lt;br&gt;Broadcast to users&lt;br&gt;Send to groups&lt;br&gt;Webhook discovery&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;LINE Messaging API&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#06C755;strokeColor=#059142;fontColor=#ffffff;fontSize=10;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="20" y="650" width="170" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="&lt;b&gt;Web Push&lt;/b&gt;&lt;br&gt;VAPID protocol&lt;br&gt;Service Worker&lt;br&gt;Browser notifications&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;web-push 3.6&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4F46E5;strokeColor=#3730A3;fontColor=#ffffff;fontSize=10;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="205" y="650" width="170" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="52" value="&lt;b&gt;Email Alert&lt;/b&gt;&lt;br&gt;Fire alert emails&lt;br&gt;SendGrid&lt;br&gt;Resend&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;@sendgrid/mail &amp;middot; resend&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DC2626;strokeColor=#B91C1C;fontColor=#ffffff;fontSize=10;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="390" y="650" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PYTHON AI DETECTION SERVICE (swimlane) ===== -->
+        <mxCell id="30" value="Python AI Detection Service" style="swimlane;fontStyle=1;align=center;startSize=40;fillColor=#FED7AA;strokeColor=#F97316;fontSize=14;fontColor=#7C2D12;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="195" width="400" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="30s" value="Docker Container &amp;nbsp;&amp;middot;&amp;nbsp; port 5001 &amp;nbsp;&amp;middot;&amp;nbsp; app.py" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#6B7280;" vertex="1" parent="30">
+          <mxGeometry x="0" y="40" width="400" height="18" as="geometry" />
+        </mxCell>
+
+        <!-- Fire Detection sub-box -->
+        <mxCell id="31" value="&lt;b&gt;Fire Detection&lt;/b&gt;&lt;br&gt;YOLOv8 (Ultralytics)&lt;br&gt;OpenCV (Python)&lt;br&gt;RGB + Thermal fusion&lt;br&gt;Dual-sensor confirm&lt;br&gt;Thermal threshold filter&lt;br&gt;Morphological filter&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;best.pt &amp;middot; NumPy &amp;middot; models/&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FFF7ED;strokeColor=#FB923C;fontSize=10;align=center;" vertex="1" parent="30">
+          <mxGeometry x="20" y="62" width="170" height="165" as="geometry" />
+        </mxCell>
+
+        <!-- Stream Server sub-box -->
+        <mxCell id="32" value="&lt;b&gt;Stream Server&lt;/b&gt;&lt;br&gt;MJPEG over HTTP&lt;br&gt;&lt;i&gt;GET /rgb_feed&lt;/i&gt;&lt;br&gt;&lt;i&gt;GET /thermal_feed&lt;/i&gt;&lt;br&gt;&lt;i&gt;POST /control&lt;/i&gt;&lt;br&gt;&lt;i&gt;GET /sensor&lt;/i&gt;&lt;br&gt;4-panel display overlay&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;stream_server.py&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FFF7ED;strokeColor=#FB923C;fontSize=10;align=center;" vertex="1" parent="30">
+          <mxGeometry x="210" y="62" width="170" height="165" as="geometry" />
+        </mxCell>
+
+        <!-- State Machine sub-box -->
+        <mxCell id="33" value="&lt;b&gt;State Machine&lt;/b&gt;&lt;br&gt;AUTO-ARM / DISARM&lt;br&gt;Track + Shoot logic&lt;br&gt;Fire coord normalize&lt;br&gt;[-1, 1] range mapping&lt;br&gt;Cooldown timers&lt;br&gt;FPS monitoring&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;detection.py &amp;middot; config.py&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FFF7ED;strokeColor=#FB923C;fontSize=10;align=center;" vertex="1" parent="30">
+          <mxGeometry x="20" y="242" width="170" height="162" as="geometry" />
+        </mxCell>
+
+        <!-- Serial Bridge sub-box -->
+        <mxCell id="34" value="&lt;b&gt;Serial Bridge&lt;/b&gt;&lt;br&gt;PySerial &amp;middot; 115200 baud&lt;br&gt;&lt;hr/&gt;&lt;i&gt;A:1/0 &amp;mdash; Arm / Disarm&lt;/i&gt;&lt;br&gt;&lt;i&gt;T:1/0 &amp;mdash; Track on/off&lt;/i&gt;&lt;br&gt;&lt;i&gt;F:x,y &amp;mdash; Aim coordinates&lt;/i&gt;&lt;br&gt;&lt;i&gt;S:1 &amp;mdash; Shoot&lt;/i&gt;&lt;br&gt;&lt;i&gt;M:U/D/L/R &amp;mdash; Manual&lt;/i&gt;&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;serial_bridge.py&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FFF7ED;strokeColor=#FB923C;fontSize=10;align=center;" vertex="1" parent="30">
+          <mxGeometry x="210" y="242" width="170" height="162" as="geometry" />
+        </mxCell>
+
+        <!-- ===== IoT HARDWARE (swimlane) ===== -->
+        <mxCell id="40" value="IoT Hardware" style="swimlane;fontStyle=1;align=center;startSize=40;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;fontColor=#333333;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="165" width="560" height="720" as="geometry" />
+        </mxCell>
+
+        <!-- Cameras -->
+        <mxCell id="41" value="&lt;b&gt;Cameras&lt;/b&gt; (USB &amp;rarr; Python AI Service)&lt;br&gt;&lt;table width=&apos;100%&apos; cellpadding=&apos;4&apos;&gt;&lt;tr&gt;&lt;td align=&apos;center&apos; bgcolor=&apos;#DBEAFE&apos; style=&apos;border-radius:4px&apos;&gt;&lt;b&gt;RGB USB Camera&lt;/b&gt;&lt;br&gt;index 2 &amp;middot; rotated 90&amp;deg; CCW&lt;br&gt;YOLO fire detection input&lt;/td&gt;&lt;td align=&apos;center&apos; bgcolor=&apos;#FEF3C7&apos; style=&apos;border-radius:4px&apos;&gt;&lt;b&gt;Thermal USB Camera&lt;/b&gt;&lt;br&gt;index 1 &amp;middot; radiometric Y16&lt;br&gt;Heat map &amp;middot; 16-bit depth&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#EFF6FF;strokeColor=#3B82F6;fontSize=10;align=center;" vertex="1" parent="40">
+          <mxGeometry x="20" y="55" width="515" height="105" as="geometry" />
+        </mxCell>
+
+        <!-- Arduino Nano -->
+        <mxCell id="43" value="&lt;b&gt;Arduino Nano&lt;/b&gt;&lt;br&gt;Sensor Node&lt;br&gt;&lt;hr/&gt;UART &amp;rarr; ESP32&lt;br&gt;115200 baud&lt;br&gt;&lt;br&gt;Outputs:&lt;br&gt;IMU: pitch, roll&lt;br&gt;ENV: temp, RH&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;arduino_nano.ino&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#DCFCE7;strokeColor=#16A34A;fontSize=10;align=center;" vertex="1" parent="40">
+          <mxGeometry x="20" y="175" width="90" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- ESP32 -->
+        <mxCell id="42" value="&lt;b&gt;ESP32 DevKit v1&lt;/b&gt;&lt;br&gt;Main Controller &amp;middot; Dual-core (FreeRTOS)&lt;br&gt;&lt;hr/&gt;Core 0: Serial / Sensor communication&lt;br&gt;Core 1: Servo PWM control&lt;br&gt;IMU stabilization filter (&amp;alpha;=0.98)&lt;br&gt;Joystick manual pan/tilt override&lt;br&gt;Arm / Disarm push button (GPIO 15)&lt;br&gt;115200 baud serial&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;esp32.ino &amp;middot; FreeRTOS dual-task&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FEF9C3;strokeColor=#CA8A04;fontSize=10;align=center;" vertex="1" parent="40">
+          <mxGeometry x="125" y="175" width="410" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- Sensors -->
+        <mxCell id="44" value="&lt;b&gt;Sensors (I2C)&lt;/b&gt;&lt;br&gt;MPU6050 &amp;mdash; 6-axis IMU&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;(accelerometer + gyroscope)&lt;/font&gt;&lt;br&gt;SHTC3 &amp;mdash; Temp + Humidity&lt;br&gt;TOF &amp;mdash; Distance sensor&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;&amp;rarr; Arduino Nano via I2C&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#F3E8FF;strokeColor=#7C3AED;fontSize=10;align=center;" vertex="1" parent="40">
+          <mxGeometry x="20" y="365" width="215" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Actuators -->
+        <mxCell id="45" value="&lt;b&gt;Servo Actuators&lt;/b&gt;&lt;br&gt;Pan Servo (GPIO 32)&lt;br&gt;Continuous rotation &amp;middot; 1100&amp;ndash;1940&amp;micro;s PWM&lt;br&gt;Deadzone: 200&amp;micro;s&lt;br&gt;&lt;br&gt;Tilt Servo (GPIO 13)&lt;br&gt;45&amp;ndash;135&amp;deg; positional &amp;middot; ramp speed control&lt;br&gt;&lt;font style=&apos;font-size:9px&apos;&gt;PWM via ESP32 ledc driver&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FCE7F3;strokeColor=#DB2777;fontSize=10;align=center;" vertex="1" parent="40">
+          <mxGeometry x="250" y="365" width="285" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Power / ESC / Relay -->
+        <mxCell id="46" value="&lt;b&gt;Power &amp;amp; Suppression System&lt;/b&gt;&lt;br&gt;ESC x2 (GPIO 18, 19) &amp;mdash; Fire suppression motor controllers&lt;br&gt;Relay x3 &amp;mdash; Power management switching&lt;br&gt;5V / 3.3V Regulators &amp;middot; MOSFETs &amp;middot; Logic Level Shifters" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#FFF1F2;strokeColor=#F43F5E;fontSize=10;align=center;" vertex="1" parent="40">
+          <mxGeometry x="20" y="500" width="515" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- Autonomous suppression loop note -->
+        <mxCell id="47" value="&lt;b&gt;Autonomous Fire Suppression Loop&lt;/b&gt;&lt;br&gt;Detect &amp;rarr; AUTO-ARM &amp;rarr; Track &amp;rarr; Center target &amp;rarr; Hold 2s &amp;rarr; SHOOT &amp;rarr; Cooldown 3s &amp;rarr; AUTO-DISARM&lt;br&gt;Both RGB (YOLO) + Thermal confirmation required before engagement" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=middle;fillColor=#FFFBEB;strokeColor=#D97706;fontSize=10;align=center;dashed=1;" vertex="1" parent="40">
+          <mxGeometry x="20" y="610" width="515" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== EDGES ===== -->
+
+        <!-- Web App Backend ↔ Supabase (bidirectional) -->
+        <mxCell id="60" value="DB Read/Write + Auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#2DA44E;fontColor=#16A34A;fontSize=10;endArrow=block;endFill=1;startArrow=block;startFill=1;" edge="1" parent="1" source="22" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Web App Backend → LINE -->
+        <mxCell id="62" value="Fire alert" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#06C755;fontColor=#059142;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="22" target="50">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Web App Backend → Web Push -->
+        <mxCell id="63" value="Push noti" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#4F46E5;fontColor=#3730A3;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="22" target="51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Web App Backend → Email -->
+        <mxCell id="64" value="Email alert" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#DC2626;fontColor=#B91C1C;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="22" target="52">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Web App ↔ Python AI (HTTP REST + MJPEG) -->
+        <mxCell id="65" value="HTTP REST + MJPEG streams" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#F97316;fontColor=#EA580C;fontSize=10;endArrow=block;endFill=1;startArrow=block;startFill=1;" edge="1" parent="1" source="20" target="30">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cameras → Python AI Fire Detection (USB) -->
+        <mxCell id="67" value="USB camera feed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3B82F6;fontColor=#1D4ED8;fontSize=9;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="41" target="31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Python AI Serial Bridge ↔ ESP32 (Serial/UART) -->
+        <mxCell id="66" value="PySerial / UART 115200 baud" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#CA8A04;fontColor=#92400E;fontSize=10;endArrow=block;endFill=1;startArrow=block;startFill=1;" edge="1" parent="1" source="34" target="42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Arduino Nano → ESP32 (UART) -->
+        <mxCell id="68" value="UART" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#16A34A;fontColor=#15803D;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="43" target="42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sensors → Arduino Nano (I2C) -->
+        <mxCell id="69" value="I2C" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#7C3AED;fontColor=#6D28D9;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="44" target="43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ESP32 → Actuators (PWM) -->
+        <mxCell id="70" value="PWM" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#DB2777;fontColor=#9D174D;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="42" target="45">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ESP32 → Power/ESC/Relay -->
+        <mxCell id="71" value="GPIO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#F43F5E;fontColor=#BE123C;fontSize=9;endArrow=block;endFill=1;" edge="1" parent="1" source="42" target="46">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
