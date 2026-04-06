@@ -1,0 +1,4 @@
+numpy
+opencv-python-headless
+pyserial
+hailo_platform
