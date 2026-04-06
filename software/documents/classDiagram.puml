@@ -1,0 +1,97 @@
+@startuml
+
+' =========================
+' CORE DOMAIN
+' =========================
+
+class useFireStatus {
+  - isSafe: boolean
+  - fireLocations: FireLocation[]
+  - fireId: string
+  + toggleFire()
+  + subscribeRealtime()
+}
+
+class FireStatusContext {
+  - fireLocations: FireLocation[]
+  - isSafe: boolean
+  + provide()
+}
+
+class useNotificationStore {
+  - notifications: Notification[]
+  + add()
+  + markAllRead()
+  + unreadCount()
+}
+
+class Notification {
+  id: string
+  message: string
+  timestamp: string
+  read: boolean
+}
+
+' =========================
+' SERVICES
+' =========================
+
+class pushNotiService <<service>> {
+  + sendPush(title, body)
+}
+
+class lineNotiService <<service>> {
+  + sendFireAlert()
+  + sendSafeAlert()
+}
+
+class locationService <<utility>> {
+  + requestLocationPermission()
+  + getCurrentLocation()
+}
+
+' =========================
+' INFRASTRUCTURE
+' =========================
+
+class SupabaseClient {
+  + insert()
+  + update()
+  + select()
+  + subscribe()
+}
+
+class eventBus {
+  + emit()
+  + on()
+  + off()
+}
+
+class subscriptions {
+  + saveSubscription()
+  + getSubscriptions()
+}
+
+' =========================
+' RELATIONSHIPS
+' =========================
+
+' ASSOCIATION
+FireStatusContext "1" -- "1" useFireStatus : manages
+
+useNotificationStore "1" *-- "0..*" Notification : contains
+
+eventBus -- useNotificationStore : notifies
+useFireStatus -- eventBus : emits
+
+useFireStatus -- SupabaseClient : reads/writes
+
+pushNotiService "1" -- "0..*" subscriptions : sends to
+
+' DEPENDENCY
+useFireStatus ..> locationService : uses
+
+useFireStatus ..> pushNotiService : triggers
+useFireStatus ..> lineNotiService : sends alert
+
+@enduml

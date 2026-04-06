@@ -1,3 +1,4 @@
+import { sendFireAlert, sendSafeAlert } from "@/lib/lineNotiService";
 import { supabase } from "@/lib/supabaseClient";
 
 export async function POST(req: Request) {
@@ -33,6 +34,12 @@ export async function POST(req: Request) {
       status === "fire"
         ? "Fire detected!"
         : "Fire has been extinguished";
+
+    if (status === "fire") {
+      await sendFireAlert();
+    } else {
+      await sendSafeAlert();
+    }
 
     try {
       await fetch(`${baseUrl}/api/push-noti`, {

@@ -2,7 +2,7 @@
 
 import Layout from "@/components/Layout";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useProfile } from "@/lib/hooks/useProfile";
@@ -11,7 +11,8 @@ import EditIcon from "@/components/icons/EditIcon";
 import Card from "@/components/cards/Card";
 import ButtonCard from "@/components/cards/ButtonCard";
 import LineAddFriendButton from "@/components/buttons/LineAddFriendButton";
-import pfp from "@/photo/pfp.jpg";
+import pfp from "@/photo/pfp.png";
+import { uploadAvatar } from "@/lib/avatar";
 
 export default function Page() {
   const router = useRouter();
@@ -28,6 +29,9 @@ export default function Page() {
     new: "",
     confirm: "",
   });
+  const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const profileInfo = useMemo(() => [
     {
@@ -42,8 +46,27 @@ export default function Page() {
     },
   ], [loading, profile, user]);
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedAvatar(file);
+    setPreview(URL.createObjectURL(file));
+  }
+
   async function handleSave() {
     if (!user) return;
+
+    // avatar
+    if (selectedAvatar) {
+      try {
+        const url = await uploadAvatar(user.id, selectedAvatar);
+        console.log("Avatar updated:", url);
+      } catch (err) {
+        console.error(err);
+        return alert("Avatar upload failed");
+      }
+    }
 
     // username
     if (editedUsername && editedUsername !== profile?.username) {
@@ -76,7 +99,7 @@ export default function Page() {
       }
     }
 
-    console.log("✅ Saved");
+    console.log("Profile Saved");
   }
 
   return (
@@ -88,14 +111,20 @@ export default function Page() {
             <div className="relative w-32 h-32">
               <div className="w-32 h-32 relative rounded-full overflow-hidden bg-background rounded-full shadow-[0px_4px_10px_rgba(0,0,0,0.25)]">
                 <Image
-                  src={profile?.avatar_url || pfp}
+                  src={preview || profile?.avatar_url || pfp}
                   alt="pfp"
                   fill
-                  sizes=""
                   className="object-cover"
                 />
               </div>
-              <EditIcon />
+              <EditIcon onClick={() => fileInputRef.current?.click()} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
             </div>
           </div>
 

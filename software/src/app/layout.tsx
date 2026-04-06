@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+// @ts-ignore
 import "./globals.css";
 import { FireStatusProvider } from "@/lib/fireStatusContext";
-// import EmailEventListenerProvider from "@/components/EmailEventListenerProvider";
 import Pwa from "@/components/Pwa";
 
 export const metadata: Metadata = {
@@ -33,8 +33,7 @@ export default function RootLayout({
       </head>
       <body>
         <FireStatusProvider>
-          {/* <EmailEventListenerProvider /> */}
-          {/* ✅ client-only logic here */}
+          
           <Pwa />
 
           <main className="min-h-screen">{children}</main>

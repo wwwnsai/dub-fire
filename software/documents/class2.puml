@@ -1,0 +1,167 @@
+@startuml
+
+' =========================
+' TYPES
+' =========================
+
+class FireLocation <<type>> {
+  lat: number
+  lng: number
+  name: string
+  severity: string
+}
+
+class Notification <<type>> {
+  id: string
+  message: string
+  timestamp: string
+  type: string
+  read: boolean
+}
+
+class SensorSnapshot <<type>> {
+  temperatureC: number
+  humidity: number
+  imuPitch: number
+  imuRoll: number
+  updatedAt: string
+}
+
+' =========================
+' CORE DOMAIN
+' =========================
+
+class useFireStatus <<hook>> {
+  - isSafe: boolean
+  - fireLocations: FireLocation[]
+  - fireId: string
+  - loading: boolean
+  + toggleFire()
+}
+
+class FireStatusContext <<context>> {
+  - fireLocations: FireLocation[]
+  - isSafe: boolean
+  - version: number
+  + FireStatusProvider()
+}
+
+class useNotificationStore <<store>> {
+  - notifications: Notification[]
+  + add()
+  + setAll()
+  + markAllRead()
+}
+
+class useProfile <<hook>> {
+  - user: User
+  - profile: Profile
+  - loading: boolean
+}
+
+' =========================
+' COMPONENTS
+' =========================
+
+class Layout <<component>> {
+  + render()
+}
+
+class LocationMap <<component>> {
+  - latitude: number
+  - longitude: number
+  - fireLocations: FireLocation[]
+}
+
+' =========================
+' SERVICES
+' =========================
+
+class pushNotiService <<service>> {
+  + requestNotificationPermission()
+}
+
+class lineNotiService <<service>> {
+  + sendFireAlert()
+  + sendSafeAlert()
+}
+
+class locationService <<service>> {
+  + requestLocationPermission()
+}
+
+' =========================
+' INFRASTRUCTURE
+' =========================
+
+class EventBus <<singleton>> {
+  + emit(event, payload)
+  + on(event, cb)
+  + off(event, cb)
+}
+
+' =========================
+' API LAYER
+' =========================
+
+class FireStatusAPI <<route>> {
+  + POST(status, fireId)
+}
+
+class PushNotiAPI <<route>> {
+  + POST(title, body)
+}
+
+class SubscribeAPI <<route>> {
+  + POST(subscription)
+}
+
+class LineNotiAPI <<route>> {
+  + POST(message)
+}
+
+class LineGroupAPI <<route>> {
+  + POST(message)
+}
+
+class WebhookAPI <<route>> {
+  + POST(event)
+}
+
+class SensorStatusAPI <<route>> {
+  + GET()
+  + POST(sensorData)
+}
+
+' =========================
+' RELATIONSHIPS
+' =========================
+
+' Composition
+Layout *-- useNotificationStore
+Layout *-- LocationMap
+
+' Aggregation
+FireStatusContext o-- FireLocation
+LocationMap o-- FireLocation
+useNotificationStore o-- Notification
+
+' Dependency
+useFireStatus ..> EventBus : emits
+useFireStatus ..> FireStatusAPI : calls
+
+FireStatusContext ..> EventBus : emits
+
+Layout ..> EventBus : listens
+
+FireStatusAPI ..> PushNotiAPI : triggers
+
+pushNotiService ..> SubscribeAPI : calls
+lineNotiService ..> LineNotiAPI : calls
+lineNotiService ..> LineGroupAPI : calls
+
+useProfile ..> Profile : returns
+
+SensorStatusAPI ..> SensorSnapshot : uses
+
+@enduml
