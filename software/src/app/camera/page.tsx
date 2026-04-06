@@ -24,7 +24,7 @@ import {
   Cog,
 } from "lucide-react";
 
-const AI_BASE_URL = process.env.NEXT_PUBLIC_AI_BASE_URL || "http://127.0.0.1:5001";
+const AI_BASE_URL = "/api/ai";
 
 type CameraSensorSnapshot = {
   temperature_c?: number | null;

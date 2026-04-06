@@ -17,6 +17,17 @@ export async function POST(req: Request) {
       console.error("❌ insert error:", error);
     }
 
+    // resolve fireId — if not provided (e.g. called from Pi), use first row
+    let resolvedId = fireId;
+    if (!resolvedId) {
+      const { data } = await supabase
+        .from("fire_status")
+        .select("id")
+        .limit(1)
+        .single();
+      resolvedId = data?.id;
+    }
+
     // update current
     await supabase
       .from("fire_status")
@@ -24,7 +35,7 @@ export async function POST(req: Request) {
         status,
         updated_at: new Date(),
       })
-      .eq("id", fireId);
+      .eq("id", resolvedId);
 
     // SEND PUSH
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
