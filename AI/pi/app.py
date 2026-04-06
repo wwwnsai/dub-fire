@@ -433,7 +433,7 @@ class FireDetectionApp:
             return
 
         now = time.time()
-        target_centered = abs(self.state._smooth_x) < 0.3 and abs(self.state._smooth_y) < 0.3
+        target_centered = abs(self.state._smooth_x) < self.settings.aim_threshold and abs(self.state._smooth_y) < self.settings.aim_threshold
         can_shoot = (
             self.state.auto_shoot
             and self.state.is_armed
@@ -463,13 +463,27 @@ class FireDetectionApp:
     _SMOOTH_ALPHA  = 0.50  # EMA factor — raise for faster response, lower for smoother
     _SEND_THRESH   = 0.02  # only send update if position changed more than this
 
+    # parallax calibration: camera is 80mm below barrel, 180mm behind tip
+    # at D=900mm measured offset=0.30 → constant = 0.30 * 900 = 270
+    _PARALLAX_CONSTANT = 270.0
+    _PARALLAX_MIN_DIST = 150    # clamp to avoid huge offset at very close range
+
+    def _parallax_y_offset(self) -> float:
+        d = self.bridge.snapshot.tof_distance_mm
+        if d <= 0:
+            return self.settings.thermal_y_offset  # ToF unavailable — use static fallback
+        return self._PARALLAX_CONSTANT / max(d, self._PARALLAX_MIN_DIST)
+
     def _send_tracking_command(self, fire_confirmed: bool, thermal_target: FireTarget | None) -> None:
         if self.state.manual_override_until > time.time():
             return
 
         if fire_confirmed and thermal_target is not None:
-            adjusted_y = thermal_target.norm_y - self.settings.thermal_y_offset
-            self.state._smooth_x += self._SMOOTH_ALPHA * (thermal_target.norm_x - self.state._smooth_x)
+            raw_x = thermal_target.norm_x
+            scale = self.settings.pan_pos_scale if raw_x >= 0 else self.settings.pan_neg_scale
+            adjusted_x = raw_x * scale
+            adjusted_y = thermal_target.norm_y - self._parallax_y_offset()
+            self.state._smooth_x += self._SMOOTH_ALPHA * (adjusted_x - self.state._smooth_x)
             self.state._smooth_y += self._SMOOTH_ALPHA * (adjusted_y - self.state._smooth_y)
 
             dx = self.state._smooth_x - getattr(self.state, "_last_sent_x", 999)
@@ -540,7 +554,7 @@ class FireDetectionApp:
             if both_confirmed:
                 remaining = max(0, self.settings.shoot_confirm_time - self.state.fire_confirmed_duration)
                 cooldown = max(0, self.settings.shoot_cooldown - (now - self.state.last_shoot_time))
-                target_centered = thermal_target is not None and abs(self.state._smooth_x) < 0.3 and abs(self.state._smooth_y) < 0.3
+                target_centered = thermal_target is not None and abs(self.state._smooth_x) < self.settings.aim_threshold and abs(self.state._smooth_y) < self.settings.aim_threshold
                 if remaining > 0:
                     shoot_text = f"CONFIRMING: {remaining:.1f}s"
                     shoot_color = (0, 165, 255)

@@ -16,6 +16,7 @@ class SensorSnapshot:
     humidity: float | None = None
     imu_pitch: float | None = None
     imu_roll: float | None = None
+    tof_distance_mm: int = -1
     updated_at: str | None = None
     source: str = "esp32-debug"
 
@@ -23,6 +24,7 @@ class SensorSnapshot:
 class ESP32Bridge:
     temp_humidity_pattern = re.compile(r"T:(-?\d+(?:\.\d+)?)C\s+H:(-?\d+(?:\.\d+)?)%")
     imu_pattern = re.compile(r"\bP:(-?\d+(?:\.\d+)?)\s+R:(-?\d+(?:\.\d+)?)")
+    tof_pattern = re.compile(r"\bD:(-?\d+)mm")
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -82,6 +84,7 @@ class ESP32Bridge:
                 print(f"[ESP32] {line}")
                 self._parse_imu(line)
                 self._parse_environment(line)
+                self._parse_tof(line)
             except Exception:
                 pass
 
@@ -92,6 +95,11 @@ class ESP32Bridge:
 
         self.snapshot.imu_pitch = float(match.group(1))
         self.snapshot.imu_roll = float(match.group(2))
+
+    def _parse_tof(self, line: str) -> None:
+        match = self.tof_pattern.search(line)
+        if match:
+            self.snapshot.tof_distance_mm = int(match.group(1))
 
     def _parse_environment(self, line: str) -> None:
         match = self.temp_humidity_pattern.search(line)

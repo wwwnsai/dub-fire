@@ -19,9 +19,12 @@ class Settings:
     min_fire_area: int
     fire_temp_min: float
     thermal_y_offset: float
+    pan_pos_scale: float
+    pan_neg_scale: float
     send_interval: float
     shoot_confirm_time: float
     shoot_cooldown: float
+    aim_threshold: float
     disarm_delay: float
     stream_fps: float
     jpeg_quality: int
@@ -42,9 +45,12 @@ def load_settings() -> Settings:
         min_fire_area=int(os.getenv("MIN_FIRE_AREA", "5")),
         fire_temp_min=float(os.getenv("FIRE_TEMP_MIN", "45.0")),
         thermal_y_offset=float(os.getenv("THERMAL_Y_OFFSET", "0.30")),
+        pan_pos_scale=float(os.getenv("PAN_POS_SCALE", "2.2")),   # boost when fire is right (norm_x > 0)
+        pan_neg_scale=float(os.getenv("PAN_NEG_SCALE", "1.0")),   # boost when fire is left  (norm_x < 0)
         send_interval=float(os.getenv("SEND_INTERVAL", "0.05")),
         shoot_confirm_time=float(os.getenv("SHOOT_CONFIRM_TIME", "2.0")),
         shoot_cooldown=float(os.getenv("SHOOT_COOLDOWN", "2.0")),
+        aim_threshold=float(os.getenv("AIM_THRESHOLD", "0.15")),
         disarm_delay=float(os.getenv("DISARM_DELAY", "5.0")),
         stream_fps=float(os.getenv("STREAM_FPS", "12")),
         jpeg_quality=int(os.getenv("JPEG_QUALITY", "80")),
