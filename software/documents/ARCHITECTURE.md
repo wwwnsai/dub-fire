@@ -336,7 +336,7 @@ Messages received from ESP32:
 | Pin | Function |
 |---|---|
 | GPIO 32 | Pan servo (continuous rotation) |
-| GPIO 13 | Tilt servo (positional, 45°–135°) |
+| GPIO 13 | Tilt servo MG945 (positional, 0°–180°) |
 | GPIO 18 | ESC 1 |
 | GPIO 19 | ESC 2 |
 | GPIO 35 | Joystick X (analog) |
@@ -352,7 +352,7 @@ Messages received from ESP32:
 | Servo | Min | Center | Max |
 |---|---|---|---|
 | Pan (continuous) | 1100 µs (full left) | 1500 µs (stop) | 1900 µs (full right) |
-| Tilt (positional) | 45° | 90° | 135° |
+| Tilt MG945 (positional) | 0° | 90° | 100° |
 | ESC | 1100 µs (idle) | 1300 µs (locked) | 1940 µs (max power) |
 
 #### Core Architecture (Dual-Core)

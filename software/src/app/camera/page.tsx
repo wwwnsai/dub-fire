@@ -21,6 +21,7 @@ import {
   Loader2,
   Maximize2,
   X,
+  Cog,
 } from "lucide-react";
 
 const AI_BASE_URL = process.env.NEXT_PUBLIC_AI_BASE_URL || "http://127.0.0.1:5001";
@@ -35,6 +36,7 @@ type CameraSensorSnapshot = {
   isArmed?: boolean;
   autoTrack?: boolean;
   autoShoot?: boolean;
+  feederOn?: boolean;
   emergencyStop?: boolean;
   shotCount?: number;
   fireTempMin?: number;
@@ -333,6 +335,7 @@ function CameraPageClient() {
                 <ToggleButton active={!!sensor.isArmed} onAction={() => sendControl("arm")} onAction2={() => sendControl("disarm")} activeLabel="Armed" inactiveLabel="Arm" activeIcon={ShieldCheck} inactiveIcon={ShieldOff} disabled={busy} />
                 <ToggleButton active={!!sensor.autoTrack} onAction={() => sendControl("track_on")} onAction2={() => sendControl("track_off")} activeLabel="Tracking" inactiveLabel="Track" activeIcon={Crosshair} inactiveIcon={Crosshair} disabled={busy} />
                 <ToggleButton active={!!sensor.autoShoot} onAction={() => sendControl("shoot_on")} onAction2={() => sendControl("shoot_off")} activeLabel="Auto On" inactiveLabel="Auto Off" activeIcon={Zap} inactiveIcon={ZapOff} disabled={busy} />
+                <ToggleButton active={!!sensor.feederOn} onAction={() => sendControl("feeder_on")} onAction2={() => sendControl("feeder_off")} activeLabel="Feeder On" inactiveLabel="Feeder" activeIcon={Cog} inactiveIcon={Cog} disabled={busy} />
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -373,6 +376,7 @@ function CameraPageClient() {
                   { label: "Armed", value: sensor.isArmed ? "Yes" : "No", bool: !!sensor.isArmed },
                   { label: "Tracking", value: sensor.autoTrack ? "On" : "Off", bool: !!sensor.autoTrack },
                   { label: "Auto Shoot", value: sensor.autoShoot ? "On" : "Off", bool: !!sensor.autoShoot },
+                  { label: "Feeder", value: sensor.feederOn ? "Running" : "Stopped", bool: !!sensor.feederOn },
                   { label: "E-Stop", value: sensor.emergencyStop ? "Active" : "Clear", bool: !sensor.emergencyStop, danger: !!sensor.emergencyStop },
                 ].map(({ label, value, bool, danger }) => (
                   <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
