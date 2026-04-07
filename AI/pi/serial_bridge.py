@@ -1,13 +1,11 @@
-import json
 import re
 import time
-import urllib.error
-import urllib.request
 from dataclasses import asdict, dataclass
 
 import serial
 
 from config import Settings
+from web_reporter import WebReporter
 
 
 @dataclass
@@ -26,11 +24,11 @@ class ESP32Bridge:
     imu_pattern = re.compile(r"\bP:(-?\d+(?:\.\d+)?)\s+R:(-?\d+(?:\.\d+)?)")
     tof_pattern = re.compile(r"\bD:(-?\d+)mm")
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, reporter: WebReporter):
         self.settings = settings
+        self._reporter = reporter
         self.serial_conn = None
         self.last_send_time = 0.0
-        self.last_sensor_push_time = 0.0
         self.snapshot = SensorSnapshot()
         self._connect()
 
@@ -109,39 +107,14 @@ class ESP32Bridge:
         self.snapshot.temperature_c = float(match.group(1))
         self.snapshot.humidity = float(match.group(2))
         self.snapshot.updated_at = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
-        self._push_sensor_status_if_due()
-
-    def _push_sensor_status_if_due(self) -> None:
-        now = time.time()
-        if now - self.last_sensor_push_time < 0.5:
-            return
-
-        payload = {
-            "temperatureC": self.snapshot.temperature_c,
-            "humidity": self.snapshot.humidity,
-            "imuPitch": self.snapshot.imu_pitch,
-            "imuRoll": self.snapshot.imu_roll,
-            "updatedAt": self.snapshot.updated_at,
-            "source": self.snapshot.source,
-        }
-
-        headers: dict = {"Content-Type": "application/json"}
-        if self.settings.sensor_status_api_key:
-            headers["Authorization"] = f"Bearer {self.settings.sensor_status_api_key}"
-
-        request = urllib.request.Request(
-            self.settings.sensor_status_api,
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="POST",
+        self._reporter.push_sensor(
+            temperature_c=self.snapshot.temperature_c,
+            humidity=self.snapshot.humidity,
+            imu_pitch=self.snapshot.imu_pitch,
+            imu_roll=self.snapshot.imu_roll,
+            updated_at=self.snapshot.updated_at,
+            source=self.snapshot.source,
         )
-
-        try:
-            with urllib.request.urlopen(request, timeout=0.5) as response:
-                response.read()
-            self.last_sensor_push_time = now
-        except (urllib.error.URLError, TimeoutError, OSError):
-            pass
 
     def snapshot_dict(self) -> dict:
         return asdict(self.snapshot)

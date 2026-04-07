@@ -7,6 +7,13 @@ import { useFireStatus } from "@/lib/fireStatusContext";
 import { useEffect, useState } from "react";
 import type { SensorSnapshot } from "@/lib/types";
 
+type PiFireStatus = {
+  condition: "fire" | "non-fire" | null;
+  fire_confirmed: boolean;
+  both_confirmed: boolean;
+  max_temp_c: number | null;
+};
+
 const EMPTY_SENSOR_STATUS: SensorSnapshot = {
   temperatureC: null,
   humidity: null,
@@ -21,6 +28,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [sensorStatus, setSensorStatus] = useState<SensorSnapshot>(EMPTY_SENSOR_STATUS);
   const [piIsArmed, setPiIsArmed] = useState<boolean | null>(null);
+  const [piFireStatus, setPiFireStatus] = useState<PiFireStatus>({ condition: null, fire_confirmed: false, both_confirmed: false, max_temp_c: null });
 
   // Combined fire status: fire if Supabase OR Pi sensor says so
   const fireDetected = !isSafe || piIsArmed === true;
@@ -71,12 +79,25 @@ export default function Home() {
       }
     };
 
+    const loadFireStatus = async () => {
+      try {
+        const response = await fetch("/api/ai/fire_status", { cache: "no-store" });
+        if (!response.ok) return;
+        const data: PiFireStatus = await response.json();
+        if (!cancelled) setPiFireStatus(data);
+      } catch {
+        // Pi offline — leave last known state
+      }
+    };
+
     loadSensorStatus();
     loadPiStatus();
+    loadFireStatus();
     const intervalId = window.setInterval(() => {
       loadSensorStatus();
       loadPiStatus();
-    }, 2000);
+      loadFireStatus();
+    }, 1000);
 
     return () => {
       cancelled = true;

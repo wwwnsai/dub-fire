@@ -1,7 +1,6 @@
 import os
 import subprocess
 import time
-import urllib.request
 from dataclasses import dataclass, replace
 import threading
 
@@ -14,6 +13,7 @@ from config import Settings, load_settings
 from detection import FireTarget, HailoDetector, detect_fire_thermal, get_fire_target, temp_to_colormap
 from serial_bridge import ESP32Bridge
 from stream_server import StreamServer, StreamStore
+from web_reporter import WebReporter
 
 
 class CameraReader:
@@ -73,8 +73,13 @@ MAX_US_PYTHON = 1400  # must match MAX_US in esp32.ino
 class FireDetectionApp:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or load_settings()
+        self.reporter = WebReporter(
+            sensor_api=self.settings.sensor_status_api,
+            fire_api=self.settings.fire_status_api,
+            api_key=self.settings.sensor_status_api_key,
+        )
         self.detector = HailoDetector(self.settings.hef_path)
-        self.bridge = ESP32Bridge(self.settings)
+        self.bridge = ESP32Bridge(self.settings, self.reporter)
         self.stream_store = StreamStore(self.settings.jpeg_quality)
         self.state_lock = threading.RLock()
         self.stream_server = StreamServer(self.settings, self.stream_store, self.handle_command)
@@ -433,23 +438,7 @@ class FireDetectionApp:
         }
 
     def _push_fire_status(self, status: str) -> None:
-        """POST fire/non-fire status to the web dashboard in a background thread."""
-        def _send():
-            try:
-                import json as _json
-                payload = _json.dumps({"status": status}).encode()
-                req = urllib.request.Request(
-                    self.settings.fire_status_api,
-                    data=payload,
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=2) as r:
-                    r.read()
-                print(f">> Web status → {status}")
-            except Exception as e:
-                print(f">> Web status push failed: {e}")
-        threading.Thread(target=_send, daemon=True).start()
+        self.reporter.push_fire_status(status)
 
     def _update_arming_state(self, both_confirmed: bool) -> None:
         now = time.time()
