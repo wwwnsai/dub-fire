@@ -135,7 +135,7 @@ export default function Page() {
           />
 
           {/* Password */}
-          {!isOAuthUser && (
+          {/* {!isOAuthUser && (
             <Card
               infoData={[
                 { title: "Old Password", description: "", editable: true },
@@ -150,7 +150,7 @@ export default function Page() {
                 })
               }
             />
-          )}
+          )} */}
 
           {/* Notification toggle */}
           <Card
