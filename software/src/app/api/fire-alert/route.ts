@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  sendFireAlertNotification,
-  getNotificationStats,
-  sendStatusChangeNotification,
-} from "@/lib/emailService";
-import { FireAlertData, StatusChangeParams } from "@/lib/types";
+import { NotificationStats } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,14 +73,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  try {
-    const stats = await getNotificationStats();
-    return NextResponse.json(stats);
-  } catch (error) {
-    console.error("Error fetching notification stats:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch stats" },
-      { status: 500 }
-    );
-  }
+  const stats: NotificationStats = {
+    totalSubscribers: 0,
+    activeSubscribers: 0,
+  };
+  return NextResponse.json(stats);
 }

@@ -3,10 +3,9 @@
 import Layout from "@/components/Layout";
 import Card from "@/components/cards/Card";
 import StatusCard from "@/components/cards/StatusCard";
-import { useFireStatus } from "@/lib/hooks/useFireStatus";
+import { useFireStatus } from "@/lib/fireStatusContext";
 import { useEffect, useState } from "react";
 import type { SensorSnapshot } from "@/lib/types";
-import { eventBus } from "@/lib/eventBus";
 
 const EMPTY_SENSOR_STATUS: SensorSnapshot = {
   temperatureC: null,
@@ -18,8 +17,28 @@ const EMPTY_SENSOR_STATUS: SensorSnapshot = {
 };
 
 export default function Home() {
-  const { isSafe, toggleFire, loading } = useFireStatus();
+  const { isSafe } = useFireStatus();
+  const [loading, setLoading] = useState(false);
   const [sensorStatus, setSensorStatus] = useState<SensorSnapshot>(EMPTY_SENSOR_STATUS);
+  const [piIsArmed, setPiIsArmed] = useState<boolean | null>(null);
+
+  // Combined fire status: fire if Supabase OR Pi sensor says so
+  const fireDetected = !isSafe || piIsArmed === true;
+
+  async function toggleFire() {
+    setLoading(true);
+    try {
+      await fetch("/api/fire-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: isSafe ? "fire" : "non-fire" }),
+      });
+    } catch (err) {
+      console.error("toggleFire error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -38,8 +57,26 @@ export default function Home() {
       }
     };
 
+    const loadPiStatus = async () => {
+      try {
+        const response = await fetch("/api/ai/sensor", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!cancelled && typeof data.isArmed === "boolean") {
+          setPiIsArmed(data.isArmed);
+        }
+      } catch {
+        // Pi offline — keep last known value, fall back to Supabase isSafe
+      }
+    };
+
     loadSensorStatus();
-    const intervalId = window.setInterval(loadSensorStatus, 2000);
+    loadPiStatus();
+    const intervalId = window.setInterval(() => {
+      loadSensorStatus();
+      loadPiStatus();
+    }, 2000);
 
     return () => {
       cancelled = true;
@@ -62,7 +99,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <StatusCard isSafe={isSafe} />
+      <StatusCard isSafe={!fireDetected} />
 
       <Card
         infoData={[

@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 
 const AI_BASE_URL = "/api/ai";
+// MJPEG streams go directly to Python — bypasses Next.js proxy to halve CPU load
+const AI_STREAM_URL = process.env.NEXT_PUBLIC_AI_STREAM_URL || "http://127.0.0.1:5001";
 
 type CameraSensorSnapshot = {
   temperature_c?: number | null;
@@ -158,7 +160,7 @@ function FullscreenView({
       {/* Feed */}
       <div className="relative flex-1 overflow-hidden">
         <img
-          src={`${AI_BASE_URL}/${isRgb ? "rgb_feed" : "thermal_feed"}?_t=${Date.now()}`}
+          src={`${AI_STREAM_URL}/${isRgb ? "rgb_feed" : "thermal_feed"}?_t=${Date.now()}`}
           alt="Live feed fullscreen"
           className="h-full w-full object-contain"
           referrerPolicy="no-referrer"
@@ -248,7 +250,7 @@ function CameraPageClient() {
       }
     };
     loadSensor();
-    const intervalId = window.setInterval(loadSensor, 1000);
+    const intervalId = window.setInterval(loadSensor, 2000);
     return () => { cancelled = true; window.clearInterval(intervalId); };
   }, []);
 
@@ -316,7 +318,7 @@ function CameraPageClient() {
                 <Maximize2 size={13} /> Fullscreen
               </button>
             </div>
-            <LiveCamera key={mode} src={`${AI_BASE_URL}/${isRgb ? "rgb_feed" : "thermal_feed"}`} />
+            <LiveCamera key={mode} src={`${AI_STREAM_URL}/${isRgb ? "rgb_feed" : "thermal_feed"}`} />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
