@@ -5,12 +5,16 @@
 
 Servo panServo;
 Servo tiltServo;
+Servo feederServo;
 Servo esc1;
 Servo esc2;
 Servo feederServo;
 
 #define SERVO_PAN_PIN   32
 #define SERVO_TILT_PIN  13
+#define JOYSTICK_X      35
+#define JOYSTICK_Y      34
+#define SW_PIN          15
 #define ESC1_PIN        18
 #define ESC2_PIN        19
 #define FEEDER_PIN      27
@@ -19,25 +23,21 @@ Servo feederServo;
 #define TOF_RX_PIN      25
 #define TOF_TX_PIN      26
 
+#define PAN_DEADZONE    200
 #define PAN_STOP_US     1500
 #define SPEED_MIN       50
 #define SPEED_MAX       400
 
-#define TILT_MIN         0
-#define TILT_MAX         180
+#define TILT_DEADZONE    200
+#define TILT_MIN         45
+#define TILT_MAX         135
+#define TILT_SPEED_SLOW  30.0
+#define TILT_SPEED_FAST  100.0
+#define TILT_RAMP_ZONE   400
 
 #define MIN_US           1100
 #define LOCK_US          1300
 #define MAX_US           1940
-
-#define FEEDER_HOME_DEG  130
-#define FEEDER_FWD_DEG   0
-
-// --- Physics / trajectory ---
-#define LAUNCH_VELOCITY    8.0f   // m/s  — calibrate empirically
-#define GRAVITY            9.81f  // m/s²
-#define TILT_HORIZONTAL    90.0f  // servo angle (deg) when launcher is horizontal
-#define MAX_RANGE_M        5.0f   // beyond this, skip physics and use current tilt
 
 #define STAB_GAIN        1.0
 #define STAB_MAX_OFFSET  15.0
@@ -60,23 +60,26 @@ volatile int   tofDistance_mm = -1;
 volatile float fireNormX     = 0.0;
 volatile float fireNormY     = 0.0;
 volatile bool  fireDetected  = false;
+volatile bool  fireUpdated   = false;  // set when a new F: command arrives, cleared after processing
 volatile bool  armed         = false;
 volatile bool  autoTrack     = false;
 volatile bool  shootCmd      = false;
-volatile bool  feederOn      = false;
 volatile bool  stabEnabled   = true;
 
 // --- Core 1 state ---
 float tiltAngle     = 90.0;
 unsigned long lastTiltTime = 0;
 int lastWrittenTilt = -1;
+unsigned long shootUntil = 0;
+#define SHOOT_DURATION_MS  3000
 
 float pitchBaseline = 0.0;
 bool  baselineSet   = false;
 
-#define TRACK_PAN_GAIN   300.0
-#define TRACK_TILT_GAIN  40.0
-#define TRACK_DEADZONE   0.03
+#define TRACK_PAN_GAIN      300.0
+#define TRACK_TILT_GAIN     20.0
+#define TRACK_DEADZONE      0.02
+#define TILT_MAX_DEG_PER_S  25.0   // max tilt speed in degrees/second
 
 // --- Core 0 buffers ---
 uint8_t tofBuf[TOF_FRAME_LEN];
@@ -94,7 +97,7 @@ void writeBoth(int us) {
 }
 
 // ============================================================
-// CORE 0 - Serial I/O (all parsing happens here)
+// CORE 0 - Serial I/O
 // ============================================================
 
 void parseTofFrame(uint8_t* buf) {
@@ -171,6 +174,9 @@ void parsePcLine(const char* line) {
   if (strncmp(line, "F:", 2) == 0) {
     if (strncmp(line + 2, "NONE", 4) == 0) {
       fireDetected = false;
+      fireUpdated  = false;
+      fireNormX    = 0.0;
+      fireNormY    = 0.0;
     } else {
       char buf[32];
       strncpy(buf, line + 2, sizeof(buf) - 1);
@@ -178,13 +184,13 @@ void parsePcLine(const char* line) {
       char* comma = strchr(buf, ',');
       if (comma) {
         *comma = '\0';
-        fireNormX = atof(buf);
-        fireNormY = atof(comma + 1);
+        fireNormX    = atof(buf);
+        fireNormY    = atof(comma + 1);
         fireDetected = true;
+        fireUpdated  = true;
       }
     }
   } else if (strncmp(line, "A:", 2) == 0) {
-    // Direct set - no intermediary flag
     armed = (line[2] == '1');
     if (!armed) writeBoth(MIN_US);
     Serial.println(armed ? "PC: ARMED" : "PC: DISARMED");
@@ -196,10 +202,6 @@ void parsePcLine(const char* line) {
       shootCmd = true;
       Serial.println("PC: SHOOT CMD RECEIVED");
     }
-  } else if (strncmp(line, "FD:", 3) == 0) {
-    feederOn = (line[3] == '1');
-    // handleFeeder() will pick up the state change on next loop tick
-    Serial.println(feederOn ? "PC: FEEDER ON" : "PC: FEEDER OFF");
   }
 }
 
@@ -254,25 +256,11 @@ void handleShoot() {
   if (shootCmd) {
     shootCmd = false;
     if (armed) {
-      // --- Physics-based tilt ---
-      float dist_m = tofDistance_mm / 1000.0f;
-      if (tofDistance_mm > 0 && dist_m <= MAX_RANGE_M) {
-        float sinVal = (dist_m * GRAVITY) / (LAUNCH_VELOCITY * LAUNCH_VELOCITY);
-        if (sinVal <= 1.0f) {
-          float theta_deg = (asinf(sinVal) / 2.0f) * (180.0f / M_PI);
-          float targetTilt = constrain(TILT_HORIZONTAL + theta_deg, TILT_MIN, TILT_MAX);
-          tiltAngle = targetTilt;
-          tiltServo.write((int)targetTilt);
-          Serial.print(">>> TRAJECTORY: dist="); Serial.print(dist_m, 2);
-          Serial.print("m  theta="); Serial.print(theta_deg, 1);
-          Serial.print("deg  tilt="); Serial.print(targetTilt, 1); Serial.println("deg <<<");
-        } else {
-          Serial.println(">>> TRAJECTORY: target out of range, using current tilt <<<");
-        }
-      } else {
-        Serial.println(">>> TRAJECTORY: no valid TOF, using current tilt <<<");
-      }
-      Serial.println(">>> SHOOT CMD: FEEDER SEQUENCE STARTING <<<");
+      Serial.println(">>> SHOOTING <<<");
+      writeBoth(MAX_US);
+      delay(1000);
+      writeBoth(LOCK_US);
+      Serial.println(">>> SHOT COMPLETE <<<");
     } else {
       Serial.println(">>> SHOOT DENIED: NOT ARMED <<<");
     }
@@ -287,6 +275,20 @@ void setup() {
   delay(1000);
   while (Serial2.available()) Serial2.read();
 
+  pinMode(SW_PIN, INPUT_PULLUP);
+
+  long sumX = 0;
+  for (int i = 0; i < 50; i++) { sumX += stableRead(JOYSTICK_X); delay(20); }
+  int calX = sumX / 50;
+  if (calX > 500 && calX < 3500) JOY_PAN_CENTER = calX;
+  Serial.print("PAN center: "); Serial.println(JOY_PAN_CENTER);
+
+  long sumY = 0;
+  for (int i = 0; i < 50; i++) { sumY += stableRead(JOYSTICK_Y); delay(20); }
+  int calY = sumY / 50;
+  if (calY > 500 && calY < 3500) JOY_TILT_CENTER = calY;
+  Serial.print("TILT center: "); Serial.println(JOY_TILT_CENTER);
+
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
@@ -298,6 +300,10 @@ void setup() {
 
   tiltServo.setPeriodHertz(50);
   tiltServo.attach(SERVO_TILT_PIN, 500, 2500);
+
+  feederServo.setPeriodHertz(50);
+  feederServo.attach(SERVO_FEEDER_PIN, 500, 2500);
+  feederServo.write(FEEDER_HOME);
   delay(100);
   Serial.println("Tilt centering...");
   for (int i = 0; i < 20; i++) {
@@ -335,29 +341,28 @@ void loop() {
 
   if (autoTrack && fireDetected) {
     if (abs(fireNormX) > TRACK_DEADZONE) {
-      int trackSpeed = (int)(abs(fireNormX) * TRACK_PAN_GAIN);
+      float scale = (fireNormX > 0) ? PAN_RIGHT_SCALE : PAN_LEFT_SCALE;
+      int trackSpeed = (int)(abs(fireNormX) * TRACK_PAN_GAIN * scale);
       trackSpeed = constrain(trackSpeed, SPEED_MIN, SPEED_MAX);
-      if (fireNormX > 0) {
-        panServo.writeMicroseconds(PAN_STOP_US + trackSpeed);
-      } else {
-        panServo.writeMicroseconds(PAN_STOP_US - trackSpeed);
-      }
+      panServo.writeMicroseconds(fireNormX > 0 ? PAN_STOP_US + PAN_TRIM_US + trackSpeed : PAN_STOP_US + PAN_TRIM_US - trackSpeed);
     } else {
-      panServo.writeMicroseconds(PAN_STOP_US);
+      panServo.writeMicroseconds(PAN_STOP_US + PAN_TRIM_US);
     }
 
     if (abs(fireNormY) > TRACK_DEADZONE) {
-      tiltAngle += fireNormY * TRACK_TILT_GAIN * dt;
+      float tiltDelta = fireNormY * TRACK_TILT_GAIN * dt;
+      float maxDelta  = TILT_MAX_DEG_PER_S * dt;
+      tiltDelta = constrain(tiltDelta, -maxDelta, maxDelta);
+      tiltAngle += tiltDelta;
       tiltAngle = constrain(tiltAngle, TILT_MIN, TILT_MAX);
     }
-
   } else {
-    panServo.writeMicroseconds(PAN_STOP_US);
+    panServo.writeMicroseconds(PAN_STOP_US + PAN_TRIM_US);
   }
 
   // Stabilization only when active
   float finalAngle;
-  if (autoTrack && fireDetected) {
+  if (joystickActive || (autoTrack && fireDetected)) {
     finalAngle = getStabilizedAngle(tiltAngle);
   } else {
     finalAngle = tiltAngle;
@@ -369,12 +374,12 @@ void loop() {
     lastWrittenTilt = writeAngle;
   }
 
-  // ESC idle state
-  if (!shootCmd) {
+  if (millis() < shootUntil) {
+    writeBoth(shootSpeedUs);
+  } else {
     writeBoth(armed ? LOCK_US : MIN_US);
   }
 
-  // Debug - slower rate to reduce serial congestion
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 500) {
     lastPrint = millis();

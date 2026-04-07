@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import queue
 import threading
+import time
 
 import cv2
 import numpy as np
@@ -44,9 +45,7 @@ SCALES = [
 class HailoDetector:
     """Context manager that keeps the Hailo pipeline open for the session."""
 
-    # Fail fast on D2H stall — 10 s default causes ~10 s freezes; 2 s is enough
-    # to declare the pipeline dead and restart it.
-    _INFER_TIMEOUT_MS = 2000
+    _INFER_TIMEOUT_MS = 6000
 
     def __init__(self, hef_path: str):
         self.hef_path    = hef_path
@@ -60,7 +59,8 @@ class HailoDetector:
         self._infer_q: queue.Queue  = queue.Queue(maxsize=1)
         self._result_q: queue.Queue = queue.Queue(maxsize=1)
         self._worker_thread: threading.Thread | None = None
-        self._running = False
+        self._running    = False
+        self._restarting = False      # gate: drop frames while pipeline is rebuilding
 
     def __enter__(self) -> "HailoDetector":
         self._clahe  = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -74,7 +74,7 @@ class HailoDetector:
         return self
 
     def _open_pipeline(self) -> None:
-        """Open (or reopen) InferVStreams. Safe to call after a timeout failure."""
+        """Open InferVStreams on the current VDevice. Call _reset_device() first on restart."""
         cfg = ConfigureParams.create_from_hef(self._hef, interface=HailoStreamInterface.PCIe)
         self._ng = self._device.configure(self._hef, cfg)[0]
         ng_params     = self._ng.create_params()
@@ -104,6 +104,20 @@ class HailoDetector:
         self._infer_ctx = None
         self._ng_ctx    = None
         self._pipeline  = None
+        self._ng        = None
+
+    def _reset_device(self) -> None:
+        """Destroy and recreate the VDevice so the PCIe DMA engine fully resets.
+        Repeated configure() calls on the same VDevice leave stale network-group
+        state that accumulates until the next infer times out again."""
+        try:
+            if self._device is not None:
+                self._device.__exit__(None, None, None)
+        except Exception:
+            pass
+        self._device = None
+        time.sleep(0.5)          # give the PCIe driver time to release the endpoint
+        self._device = VDevice()
 
     def __exit__(self, *args) -> None:
         self._running = False
@@ -114,6 +128,12 @@ class HailoDetector:
         if self._worker_thread:
             self._worker_thread.join(timeout=self._INFER_TIMEOUT_MS / 1000 + 1.0)
         self._close_pipeline()
+        try:
+            if self._device is not None:
+                self._device.__exit__(None, None, None)
+        except Exception:
+            pass
+        self._device = None
 
     def _infer_worker(self) -> None:
         """Dedicated thread that owns all _pipeline.infer() calls.
@@ -139,12 +159,25 @@ class HailoDetector:
                 # Pipeline is now in an error state — tear it down and rebuild so
                 # the next frame can succeed rather than timing out again.
                 print("[HailoDetector] pipeline timeout — restarting…")
+                self._restarting = True
                 self._close_pipeline()
                 try:
+                    # Full VDevice reset: destroys + recreates the PCIe endpoint so
+                    # no stale DMA state carries over from the failed network group.
+                    self._reset_device()
                     self._open_pipeline()
+                    # Discard any frames that queued up during the restart window
+                    # so the first inference hits a clean, idle pipeline.
+                    while True:
+                        try:
+                            self._infer_q.get_nowait()
+                        except queue.Empty:
+                            break
                     print("[HailoDetector] pipeline restarted OK")
                 except Exception as exc:
                     print(f"[HailoDetector] restart failed: {exc}")
+                finally:
+                    self._restarting = False
 
             # Discard stale result if consumer hasn't read yet, then post new one
             try:
@@ -165,11 +198,12 @@ class HailoDetector:
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         resized, scale, pad = _letterbox(rgb)
 
-        # Submit frame; drop if worker is still busy with the previous one
-        try:
-            self._infer_q.put_nowait((resized, (orig_h, orig_w, scale, pad)))
-        except queue.Full:
-            pass
+        # Submit frame; drop if worker is still busy or pipeline is restarting
+        if not self._restarting:
+            try:
+                self._infer_q.put_nowait((resized, (orig_h, orig_w, scale, pad)))
+            except queue.Full:
+                pass
 
         # Collect the latest result (non-blocking — use empty mask if not ready yet)
         try:
