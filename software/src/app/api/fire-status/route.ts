@@ -46,11 +46,11 @@ export async function POST(req: Request) {
         ? "Fire detected!"
         : "Fire has been extinguished";
 
-    if (status === "fire") {
-      await sendFireAlert();
-    } else {
-      await sendSafeAlert();
-    }
+    // if (status === "fire") {
+    //   await sendFireAlert();
+    // } else {
+    //   await sendSafeAlert();
+    // }
 
     try {
       await fetch(`${baseUrl}/api/push-noti`, {

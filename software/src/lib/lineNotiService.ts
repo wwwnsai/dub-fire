@@ -1,13 +1,14 @@
-"use client";
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
 
 export async function sendFireAlert() {
-  await fetch("/api/line-noti", {
+  await fetch(`${baseUrl}/api/line-noti`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: "🔥 Fire Alert!!" }),
   });
 
-  await fetch("/api/line-group", {
+  await fetch(`${baseUrl}/api/line-group`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: "🔥 ไฟไหม้จ้า" }),
@@ -15,13 +16,13 @@ export async function sendFireAlert() {
 }
 
 export async function sendSafeAlert() {
-  await fetch("/api/line-noti", {
+  await fetch(`${baseUrl}/api/line-noti`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: "✅ Fire extinguished" }),
   });
 
-  await fetch("/api/line-group", {
+  await fetch(`${baseUrl}/api/line-group`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: "🧯 ดับไฟแล้วจ้า" }),
