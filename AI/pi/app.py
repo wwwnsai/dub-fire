@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+import urllib.request
 from dataclasses import dataclass, replace
 import threading
 
@@ -33,6 +34,7 @@ class CameraReader:
             with self._lock:
                 self._ok    = ok
                 self._frame = frame
+            time.sleep(0.10)  # ~10 fps cap — matches processing loop, saves CPU
 
     def read(self):
         with self._lock:
@@ -65,6 +67,9 @@ class RuntimeState:
     _last_rgb_confirmed_time: float = 0.0
 
 
+MAX_US_PYTHON = 1400  # must match MAX_US in esp32.ino
+
+
 class FireDetectionApp:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or load_settings()
@@ -81,17 +86,17 @@ class FireDetectionApp:
 
         rgb_cap = cv2.VideoCapture(self.settings.rgb_cam, cv2.CAP_V4L2)
         rgb_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        rgb_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        rgb_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        rgb_cap.set(cv2.CAP_PROP_FPS, 30)
+        rgb_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        rgb_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        rgb_cap.set(cv2.CAP_PROP_FPS, 10)
 
         # resolve any symlink to real device path (/dev/thermal -> /dev/video10)
         thermal_dev = os.path.realpath(self.settings.thermal_cam)
         # use GStreamer pipeline to force Y16 radiometric format
         gst_pipeline = (
             f"v4l2src device={thermal_dev} ! "
-            "video/x-raw,format=GRAY16_LE,width=160,height=122 ! "
-            "appsink drop=1"
+            "video/x-raw,format=GRAY16_LE,width=160,height=120 ! "
+            "appsink drop=true max-buffers=1 emit-signals=false"
         )
         thermal_cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
         time.sleep(2)  # Lepton needs time to boot after open
@@ -143,8 +148,20 @@ class FireDetectionApp:
             cv2.namedWindow("Fire Detection System", cv2.WINDOW_NORMAL)
             cv2.resizeWindow("Fire Detection System", 1280, 960)
 
+    _TARGET_FPS = 6  # cap main processing loop — lower to reduce Hailo DMA pressure
+
     def _run_loop(self, rgb_cap: CameraReader, thermal_cap: CameraReader) -> None:
+        frame_interval = 1.0 / self._TARGET_FPS
+        last_frame_time = 0.0
+
         while True:
+            now = time.time()
+            elapsed = now - last_frame_time
+            if elapsed < frame_interval:
+                time.sleep(frame_interval - elapsed)
+                continue
+            last_frame_time = time.time()
+
             ok_rgb, rgb_frame = rgb_cap.read()
             ok_thermal, thermal_raw = thermal_cap.read()
 
@@ -184,25 +201,29 @@ class FireDetectionApp:
                 thermal_info["max_temp"],
                 fire_status,
             )
-            rgb_mask_color = self._build_rgb_mask_view(rgb_mask)
-            thermal_views = self._build_thermal_views(
-                thermal_info["display"],
-                thermal_info["mask"],
-                half_w,
-                half_h,
-            )
-
-            combined = np.vstack(
-                [
-                    np.hstack([cv2.resize(display_rgb, (half_w, half_h)), thermal_views["display"]]),
-                    np.hstack([cv2.resize(rgb_mask_color, (half_w, half_h)), thermal_views["mask"]]),
-                ]
-            )
 
             self.stream_store.update_rgb_frame(display_rgb)
-            self.stream_store.update_thermal_frame(thermal_views["stream"])
+            stream_thermal = (
+                thermal_info["display"].copy()
+                if thermal_info["display"] is not None
+                else np.zeros((half_h, half_w, 3), dtype=np.uint8)
+            )
+            self.stream_store.update_thermal_frame(stream_thermal)
 
             if self.settings.enable_local_display:
+                rgb_mask_color = self._build_rgb_mask_view(rgb_mask)
+                thermal_views = self._build_thermal_views(
+                    thermal_info["display"],
+                    thermal_info["mask"],
+                    half_w,
+                    half_h,
+                )
+                combined = np.vstack(
+                    [
+                        np.hstack([cv2.resize(display_rgb, (half_w, half_h)), thermal_views["display"]]),
+                        np.hstack([cv2.resize(rgb_mask_color, (half_w, half_h)), thermal_views["mask"]]),
+                    ]
+                )
                 cv2.imshow("Fire Detection System", combined)
 
             if self._handle_key_input():
@@ -399,6 +420,25 @@ class FireDetectionApp:
             "both_confirmed": False,
         }
 
+    def _push_fire_status(self, status: str) -> None:
+        """POST fire/non-fire status to the web dashboard in a background thread."""
+        def _send():
+            try:
+                import json as _json
+                payload = _json.dumps({"status": status}).encode()
+                req = urllib.request.Request(
+                    self.settings.fire_status_api,
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=2) as r:
+                    r.read()
+                print(f">> Web status → {status}")
+            except Exception as e:
+                print(f">> Web status push failed: {e}")
+        threading.Thread(target=_send, daemon=True).start()
+
     def _update_arming_state(self, both_confirmed: bool) -> None:
         now = time.time()
         if self.state.emergency_stop:
@@ -409,6 +449,7 @@ class FireDetectionApp:
             if not self.state.is_armed:
                 self.state.is_armed = True
                 self.bridge.force_send("A:1\n")
+                self._push_fire_status("fire")
                 print(">> AUTO-ARM: fire confirmed!")
             return
 
@@ -416,6 +457,7 @@ class FireDetectionApp:
             self.state.is_armed = False
             self.state.shot_count = 0
             self.bridge.force_send("A:0\n")
+            self._push_fire_status("non-fire")
             print(f">> AUTO-DISARM: no fire for {self.settings.disarm_delay}s")
 
     def _update_shoot_timer(self, both_confirmed: bool) -> None:
@@ -451,14 +493,49 @@ class FireDetectionApp:
             threading.Thread(target=self._run_shoot_sequence, daemon=True).start()
 
     def _run_shoot_sequence(self) -> None:
+        distance_mm = self.bridge.snapshot.tof_distance_mm
+        shoot_us = self._esc_for_distance(distance_mm) if distance_mm > 0 else 1300
+        print(f"  SHOOT: ToF={distance_mm}mm → ESC={shoot_us}µs")
         try:
-            self.bridge.force_send("FD:1\n")   # feeder spin up
-            time.sleep(1.5)
-            self.bridge.force_send("S:1\n")    # shoot
+            self.bridge.force_send(f"V:{shoot_us}\n")  # set distance-adapted speed
+            self.bridge.force_send("S:1\n")             # spin up motors
+            time.sleep(0.5)                             # let motors reach speed
+            self.bridge.force_send("FD:1\n")            # feeder pushes
+            time.sleep(1.5)                             # feeder active
         finally:
-            self.bridge.force_send("FD:0\n")   # always return feeder home immediately
+            self.bridge.force_send("FD:0\n")            # feeder goes home
             self.state.last_shoot_time = time.time()
             self.state._shoot_sequence_running = False
+
+    # Distance → ESC µs lookup table.
+    # Points are (distance_mm, esc_us). Interpolated linearly between them.
+    # Values here are PLACEHOLDER — calibrate by testing each ESC setting and
+    # measuring where the projectile lands. Format: [(dist_mm, esc_us), ...]
+    # Must be sorted ascending by distance.
+    _ESC_RANGE_TABLE = [
+        (1640, 1200),   # 1.64 m — measured at t90
+        (3180, 1250),   # 3.18 m
+        (3570, 1300),   # 3.57 m
+        (4100, 1350),   # 4.10 m
+        (4500, 1400),   # 4.50 m (maximum)
+    ]
+
+    def _esc_for_distance(self, distance_mm: int) -> int:
+        """Map ToF distance to ESC µs using linear interpolation of the lookup table."""
+        table = self._ESC_RANGE_TABLE
+        if distance_mm <= 0:
+            return MAX_US_PYTHON  # no ToF reading — use max (safe fallback)
+        if distance_mm <= table[0][0]:
+            return table[0][1]
+        if distance_mm >= table[-1][0]:
+            return table[-1][1]
+        for i in range(len(table) - 1):
+            d0, us0 = table[i]
+            d1, us1 = table[i + 1]
+            if d0 <= distance_mm <= d1:
+                t = (distance_mm - d0) / (d1 - d0)
+                return int(us0 + t * (us1 - us0))
+        return table[-1][1]
 
     _SMOOTH_ALPHA  = 0.50  # EMA factor — raise for faster response, lower for smoother
     _SEND_THRESH   = 0.02  # only send update if position changed more than this

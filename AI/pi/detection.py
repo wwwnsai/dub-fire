@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import queue
+import threading
 
 import cv2
 import numpy as np
@@ -42,58 +44,145 @@ SCALES = [
 class HailoDetector:
     """Context manager that keeps the Hailo pipeline open for the session."""
 
+    # Fail fast on D2H stall — 10 s default causes ~10 s freezes; 2 s is enough
+    # to declare the pipeline dead and restart it.
+    _INFER_TIMEOUT_MS = 2000
+
     def __init__(self, hef_path: str):
         self.hef_path    = hef_path
         self._hef        = None
         self._device     = None
+        self._ng         = None       # keep the configured network group for restart
         self._infer_ctx  = None
         self._ng_ctx     = None
         self._pipeline   = None
         self._input_name = ""
+        self._infer_q: queue.Queue  = queue.Queue(maxsize=1)
+        self._result_q: queue.Queue = queue.Queue(maxsize=1)
+        self._worker_thread: threading.Thread | None = None
+        self._running = False
 
     def __enter__(self) -> "HailoDetector":
+        self._clahe  = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         self._hef    = HEF(self.hef_path)
         self._device = VDevice()
-        cfg    = ConfigureParams.create_from_hef(self._hef, interface=HailoStreamInterface.PCIe)
-        ng     = self._device.configure(self._hef, cfg)[0]
-        ng_params     = ng.create_params()
-        input_params  = InputVStreamParams.make(ng, format_type=FormatType.UINT8)
-        output_params = OutputVStreamParams.make(ng, format_type=FormatType.FLOAT32)
-        self._input_name = self._hef.get_input_vstream_infos()[0].name
+        self._open_pipeline()
 
-        self._infer_ctx = InferVStreams(ng, input_params, output_params)
-        self._pipeline  = self._infer_ctx.__enter__()
-        self._ng_ctx    = ng.activate(ng_params)
-        self._ng_ctx.__enter__()
+        self._running = True
+        self._worker_thread = threading.Thread(target=self._infer_worker, daemon=True)
+        self._worker_thread.start()
         return self
 
+    def _open_pipeline(self) -> None:
+        """Open (or reopen) InferVStreams. Safe to call after a timeout failure."""
+        cfg = ConfigureParams.create_from_hef(self._hef, interface=HailoStreamInterface.PCIe)
+        self._ng = self._device.configure(self._hef, cfg)[0]
+        ng_params     = self._ng.create_params()
+        input_params  = InputVStreamParams.make(self._ng, format_type=FormatType.UINT8)
+        output_params = OutputVStreamParams.make(
+            self._ng, format_type=FormatType.FLOAT32,
+            timeout_ms=self._INFER_TIMEOUT_MS,
+        )
+        self._input_name = self._hef.get_input_vstream_infos()[0].name
+        self._ng_ctx    = self._ng.activate(ng_params)
+        self._ng_ctx.__enter__()
+        self._infer_ctx = InferVStreams(self._ng, input_params, output_params)
+        self._pipeline  = self._infer_ctx.__enter__()
+
+    def _close_pipeline(self) -> None:
+        """Tear down InferVStreams and the network-group activation."""
+        try:
+            if self._infer_ctx:
+                self._infer_ctx.__exit__(None, None, None)
+        except Exception:
+            pass
+        try:
+            if self._ng_ctx:
+                self._ng_ctx.__exit__(None, None, None)
+        except Exception:
+            pass
+        self._infer_ctx = None
+        self._ng_ctx    = None
+        self._pipeline  = None
+
     def __exit__(self, *args) -> None:
-        if self._ng_ctx:
-            self._ng_ctx.__exit__(*args)
-        if self._infer_ctx:
-            self._infer_ctx.__exit__(*args)
+        self._running = False
+        try:
+            self._infer_q.put_nowait(None)
+        except queue.Full:
+            pass
+        if self._worker_thread:
+            self._worker_thread.join(timeout=self._INFER_TIMEOUT_MS / 1000 + 1.0)
+        self._close_pipeline()
+
+    def _infer_worker(self) -> None:
+        """Dedicated thread that owns all _pipeline.infer() calls.
+        On timeout the pipeline is automatically torn down and rebuilt so the
+        main loop never stalls for more than _INFER_TIMEOUT_MS milliseconds.
+        """
+        while self._running:
+            try:
+                item = self._infer_q.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            if item is None:
+                break
+            resized, orig_shape = item
+            orig_h, orig_w, scale, pad = orig_shape
+            try:
+                outputs = self._pipeline.infer(
+                    {self._input_name: np.expand_dims(resized, axis=0)}
+                )
+                detections = _decode_outputs(outputs, orig_w, orig_h, scale, pad)
+            except Exception:
+                detections = []
+                # Pipeline is now in an error state — tear it down and rebuild so
+                # the next frame can succeed rather than timing out again.
+                print("[HailoDetector] pipeline timeout — restarting…")
+                self._close_pipeline()
+                try:
+                    self._open_pipeline()
+                    print("[HailoDetector] pipeline restarted OK")
+                except Exception as exc:
+                    print(f"[HailoDetector] restart failed: {exc}")
+
+            # Discard stale result if consumer hasn't read yet, then post new one
+            try:
+                self._result_q.get_nowait()
+            except queue.Empty:
+                pass
+            self._result_q.put((detections, orig_h, orig_w))
 
     def infer_rgb(self, frame_bgr: np.ndarray) -> np.ndarray:
-        """Run Hailo inference on a BGR frame. Returns fire-class binary mask."""
+        """Submit a frame for inference and return the latest available result mask."""
         orig_h, orig_w = frame_bgr.shape[:2]
         # boost contrast so small/distant flames stand out more
         lab = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        l = clahe.apply(l)
+        l = self._clahe.apply(l)
         frame_bgr = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
 
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         resized, scale, pad = _letterbox(rgb)
-        outputs = self._pipeline.infer(
-            {self._input_name: np.expand_dims(resized, axis=0)}
-        )
-        detections = _decode_outputs(outputs, orig_w, orig_h, scale, pad)
 
-        mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+        # Submit frame; drop if worker is still busy with the previous one
+        try:
+            self._infer_q.put_nowait((resized, (orig_h, orig_w, scale, pad)))
+        except queue.Full:
+            pass
+
+        # Collect the latest result (non-blocking — use empty mask if not ready yet)
+        try:
+            detections, res_h, res_w = self._result_q.get_nowait()
+        except queue.Empty:
+            return np.zeros((orig_h, orig_w), dtype=np.uint8)
+
+        mask = np.zeros((res_h, res_w), dtype=np.uint8)
         for (x1, y1, x2, y2), _score, cls_id in detections:
             if cls_id in FIRE_CLASSES:
                 cv2.rectangle(mask, (int(x1), int(y1)), (int(x2), int(y2)), 255, -1)
+        if res_h != orig_h or res_w != orig_w:
+            mask = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
         return mask
 
 
