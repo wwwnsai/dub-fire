@@ -29,7 +29,7 @@ def load_settings() -> Settings:
         rgb_cam=int(os.getenv("RGB_CAM", "1")),
         thermal_cam=int(os.getenv("THERMAL_CAM", "2")),
         enable_local_display=os.getenv("ENABLE_LOCAL_DISPLAY", "1") == "1",
-        esp32_port=os.getenv("ESP32_PORT", "COM5"),
+        esp32_port=os.getenv("ESP32_PORT", "COM9"),
         esp32_baud=int(os.getenv("ESP32_BAUD", "115200")),
         sensor_status_api=os.getenv("SENSOR_STATUS_API", "http://127.0.0.1:3000/api/sensor-status"),
         sensor_status_api_key=os.getenv("SENSOR_STATUS_API_KEY", ""),

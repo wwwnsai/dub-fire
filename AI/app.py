@@ -17,6 +17,7 @@ class RuntimeState:
     auto_track: bool = True
     is_armed: bool = False
     auto_shoot: bool = True
+    feeder_on: bool = False
     fire_confirm_start: float = 0.0
     fire_confirmed_duration: float = 0.0
     last_shoot_time: float = 0.0
@@ -211,15 +212,19 @@ class FireDetectionApp:
     def _build_sensor_snapshot(self) -> dict:
         snapshot = self.bridge.snapshot_dict()
         with self.state_lock:
+            tof_mm = self.bridge.snapshot.tof_distance_mm
             snapshot.update(
                 {
                     "isArmed": self.state.is_armed,
                     "autoTrack": self.state.auto_track,
                     "autoShoot": self.state.auto_shoot,
+                    "feederOn": self.state.feeder_on,
                     "emergencyStop": self.state.emergency_stop,
                     "shotCount": self.state.shot_count,
                     "fireTempMin": self.settings.fire_temp_min,
                     "fps": self.state.fps,
+                    "tofDistanceMm": tof_mm,
+                    "tofDistanceM": round(tof_mm / 1000, 3) if tof_mm is not None else None,
                 }
             )
         return snapshot
@@ -276,6 +281,12 @@ class FireDetectionApp:
                 self._queue_manual_nudge(0.0, -0.9)
             elif action == "tilt_down":
                 self._queue_manual_nudge(0.0, 0.9)
+            elif action == "feeder_on":
+                self.state.feeder_on = True
+                self.bridge.force_send("FD:1\n")
+            elif action == "feeder_off":
+                self.state.feeder_on = False
+                self.bridge.force_send("FD:0\n")
             else:
                 raise ValueError(f"Unsupported action: {action}")
 
@@ -379,6 +390,15 @@ class FireDetectionApp:
             self.state.last_shoot_time = now
             self.state.shot_count += 1
             print(f">>>>> SHOT FIRED! (#{self.state.shot_count}, temp={max_temp:.0f}C) <<<<<")
+            threading.Thread(target=self._feeder_sequence, daemon=True).start()
+
+    def _feeder_sequence(self) -> None:
+        time.sleep(3.0)                   # wait 3 seconds before feeding
+        self.bridge.force_send("FD:1\n")  # push ball
+        print(">> FEEDER PUSH")
+        time.sleep(0.8)                   # hold at push position
+        self.bridge.force_send("FD:0\n")  # return to home
+        print(">> FEEDER RETURN")
 
     def _send_tracking_command(self, fire_confirmed: bool, thermal_target: FireTarget | None) -> None:
         if self.state.manual_override_until > time.time():
@@ -510,6 +530,7 @@ class FireDetectionApp:
             "isArmed": self.state.is_armed,
             "autoTrack": self.state.auto_track,
             "autoShoot": self.state.auto_shoot,
+            "feederOn": self.state.feeder_on,
             "emergencyStop": self.state.emergency_stop,
             "shotCount": self.state.shot_count,
             "fireTempMin": self.settings.fire_temp_min,
@@ -560,6 +581,12 @@ class FireDetectionApp:
             self.settings = replace(self.settings, fire_temp_min=min(500, self.settings.fire_temp_min + 10))
         elif action == "temp_down":
             self.settings = replace(self.settings, fire_temp_min=max(50, self.settings.fire_temp_min - 10))
+        elif action == "feeder_on":
+            self.state.feeder_on = True
+            self.bridge.force_send("FD:1\n")
+        elif action == "feeder_off":
+            self.state.feeder_on = False
+            self.bridge.force_send("FD:0\n")
         return self._current_state_dict()
 
     def _handle_key_input(self) -> bool:

@@ -1,19 +1,21 @@
 #include <ESP32Servo.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-#include <math.h>
 
 Servo panServo;
 Servo tiltServo;
+Servo feederServo;
 Servo esc1;
 Servo esc2;
-Servo feederServo;
 
-#define SERVO_PAN_PIN   32
-#define SERVO_TILT_PIN  13
+#define SERVO_PAN_PIN     32
+#define SERVO_TILT_PIN    13
+#define SERVO_FEEDER_PIN  27
+#define FEEDER_HOME       130
+#define FEEDER_LOAD       0
+#define SW_PIN          15
 #define ESC1_PIN        18
 #define ESC2_PIN        19
-#define FEEDER_PIN      27
 #define IMU_RX_PIN      16
 #define IMU_TX_PIN      17
 #define TOF_RX_PIN      25
@@ -23,21 +25,14 @@ Servo feederServo;
 #define SPEED_MIN       50
 #define SPEED_MAX       400
 
-#define TILT_MIN         0
-#define TILT_MAX         180
+#define TILT_MIN         45
+#define TILT_MAX         135
+#define TILT_SPEED_SLOW  30.0
+#define TILT_SPEED_FAST  100.0
 
 #define MIN_US           1100
 #define LOCK_US          1300
-#define MAX_US           1940
-
-#define FEEDER_HOME_DEG  130
-#define FEEDER_FWD_DEG   0
-
-// --- Physics / trajectory ---
-#define LAUNCH_VELOCITY    8.0f   // m/s  — calibrate empirically
-#define GRAVITY            9.81f  // m/s²
-#define TILT_HORIZONTAL    90.0f  // servo angle (deg) when launcher is horizontal
-#define MAX_RANGE_M        5.0f   // beyond this, skip physics and use current tilt
+#define MAX_US           1400
 
 #define STAB_GAIN        1.0
 #define STAB_MAX_OFFSET  15.0
@@ -60,10 +55,11 @@ volatile int   tofDistance_mm = -1;
 volatile float fireNormX     = 0.0;
 volatile float fireNormY     = 0.0;
 volatile bool  fireDetected  = false;
+volatile bool  fireUpdated   = false;  // set when a new F: command arrives, cleared after processing
 volatile bool  armed         = false;
 volatile bool  autoTrack     = false;
 volatile bool  shootCmd      = false;
-volatile bool  feederOn      = false;
+volatile bool  feederActive  = false;
 volatile bool  stabEnabled   = true;
 
 // --- Core 1 state ---
@@ -74,9 +70,15 @@ int lastWrittenTilt = -1;
 float pitchBaseline = 0.0;
 bool  baselineSet   = false;
 
-#define TRACK_PAN_GAIN   300.0
-#define TRACK_TILT_GAIN  40.0
-#define TRACK_DEADZONE   0.03
+bool  lastBtn       = HIGH;
+unsigned long lastClickTime = 0;
+int   clickCount    = 0;
+#define DCLICK_WINDOW 400
+
+#define TRACK_PAN_GAIN      300.0
+#define TRACK_TILT_GAIN     20.0
+#define TRACK_DEADZONE      0.02
+#define TILT_MAX_DEG_PER_S  25.0   // max tilt speed in degrees/second
 
 // --- Core 0 buffers ---
 uint8_t tofBuf[TOF_FRAME_LEN];
@@ -94,7 +96,7 @@ void writeBoth(int us) {
 }
 
 // ============================================================
-// CORE 0 - Serial I/O (all parsing happens here)
+// CORE 0 - Serial I/O
 // ============================================================
 
 void parseTofFrame(uint8_t* buf) {
@@ -171,6 +173,9 @@ void parsePcLine(const char* line) {
   if (strncmp(line, "F:", 2) == 0) {
     if (strncmp(line + 2, "NONE", 4) == 0) {
       fireDetected = false;
+      fireUpdated  = false;
+      fireNormX    = 0.0;
+      fireNormY    = 0.0;
     } else {
       char buf[32];
       strncpy(buf, line + 2, sizeof(buf) - 1);
@@ -178,13 +183,13 @@ void parsePcLine(const char* line) {
       char* comma = strchr(buf, ',');
       if (comma) {
         *comma = '\0';
-        fireNormX = atof(buf);
-        fireNormY = atof(comma + 1);
+        fireNormX    = atof(buf);
+        fireNormY    = atof(comma + 1);
         fireDetected = true;
+        fireUpdated  = true;
       }
     }
   } else if (strncmp(line, "A:", 2) == 0) {
-    // Direct set - no intermediary flag
     armed = (line[2] == '1');
     if (!armed) writeBoth(MIN_US);
     Serial.println(armed ? "PC: ARMED" : "PC: DISARMED");
@@ -197,9 +202,9 @@ void parsePcLine(const char* line) {
       Serial.println("PC: SHOOT CMD RECEIVED");
     }
   } else if (strncmp(line, "FD:", 3) == 0) {
-    feederOn = (line[3] == '1');
-    // handleFeeder() will pick up the state change on next loop tick
-    Serial.println(feederOn ? "PC: FEEDER ON" : "PC: FEEDER OFF");
+    feederActive = (line[3] == '1');
+    feederServo.write(feederActive ? FEEDER_LOAD : FEEDER_HOME);
+    Serial.println(feederActive ? "PC: FEEDER ON" : "PC: FEEDER OFF");
   }
 }
 
@@ -246,33 +251,38 @@ float getStabilizedAngle(float target) {
   return constrain(target + offset, TILT_MIN, TILT_MAX);
 }
 
-void handleFeeder() {
-  feederServo.write(feederOn ? FEEDER_FWD_DEG : FEEDER_HOME_DEG);
+void handleButton() {
+  bool btn = digitalRead(SW_PIN);
+  if (lastBtn == HIGH && btn == LOW) {
+    unsigned long now = millis();
+    if (now - lastClickTime < DCLICK_WINDOW) {
+      clickCount++;
+    } else {
+      clickCount = 1;
+    }
+    lastClickTime = now;
+  }
+  lastBtn = btn;
+
+  if (clickCount > 0 && (millis() - lastClickTime > DCLICK_WINDOW)) {
+    if (clickCount == 1) {
+      armed = !armed;
+      if (!armed) writeBoth(MIN_US);
+      Serial.println(armed ? "BTN: ARMED" : "BTN: DISARMED");
+    } else if (clickCount >= 2) {
+      stabEnabled = !stabEnabled;
+      baselineSet = false;
+      Serial.println(stabEnabled ? "BTN: STAB ON" : "BTN: STAB OFF");
+    }
+    clickCount = 0;
+  }
 }
 
 void handleShoot() {
   if (shootCmd) {
     shootCmd = false;
     if (armed) {
-      // --- Physics-based tilt ---
-      float dist_m = tofDistance_mm / 1000.0f;
-      if (tofDistance_mm > 0 && dist_m <= MAX_RANGE_M) {
-        float sinVal = (dist_m * GRAVITY) / (LAUNCH_VELOCITY * LAUNCH_VELOCITY);
-        if (sinVal <= 1.0f) {
-          float theta_deg = (asinf(sinVal) / 2.0f) * (180.0f / M_PI);
-          float targetTilt = constrain(TILT_HORIZONTAL + theta_deg, TILT_MIN, TILT_MAX);
-          tiltAngle = targetTilt;
-          tiltServo.write((int)targetTilt);
-          Serial.print(">>> TRAJECTORY: dist="); Serial.print(dist_m, 2);
-          Serial.print("m  theta="); Serial.print(theta_deg, 1);
-          Serial.print("deg  tilt="); Serial.print(targetTilt, 1); Serial.println("deg <<<");
-        } else {
-          Serial.println(">>> TRAJECTORY: target out of range, using current tilt <<<");
-        }
-      } else {
-        Serial.println(">>> TRAJECTORY: no valid TOF, using current tilt <<<");
-      }
-      Serial.println(">>> SHOOT CMD: FEEDER SEQUENCE STARTING <<<");
+      Serial.println(">>> SHOOT <<<");
     } else {
       Serial.println(">>> SHOOT DENIED: NOT ARMED <<<");
     }
@@ -287,6 +297,8 @@ void setup() {
   delay(1000);
   while (Serial2.available()) Serial2.read();
 
+  pinMode(SW_PIN, INPUT_PULLUP);
+
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
@@ -298,6 +310,10 @@ void setup() {
 
   tiltServo.setPeriodHertz(50);
   tiltServo.attach(SERVO_TILT_PIN, 500, 2500);
+
+  feederServo.setPeriodHertz(50);
+  feederServo.attach(SERVO_FEEDER_PIN, 500, 2500);
+  feederServo.write(FEEDER_HOME);
   delay(100);
   Serial.println("Tilt centering...");
   for (int i = 0; i < 20; i++) {
@@ -313,10 +329,6 @@ void setup() {
   esc2.attach(ESC2_PIN, MIN_US, MAX_US);
   writeBoth(MIN_US);
 
-  feederServo.setPeriodHertz(50);
-  feederServo.attach(FEEDER_PIN, 500, 2500);
-  feederServo.write(FEEDER_HOME_DEG);
-
   lastTiltTime = micros();
 
   xTaskCreatePinnedToCore(serialTask, "SerialIO", 4096, NULL, 1, NULL, 0);
@@ -325,8 +337,8 @@ void setup() {
 }
 
 void loop() {
+  handleButton();
   handleShoot();
-  handleFeeder();
 
   unsigned long now = micros();
   float dt = (now - lastTiltTime) / 1000000.0;
@@ -337,31 +349,24 @@ void loop() {
     if (abs(fireNormX) > TRACK_DEADZONE) {
       int trackSpeed = (int)(abs(fireNormX) * TRACK_PAN_GAIN);
       trackSpeed = constrain(trackSpeed, SPEED_MIN, SPEED_MAX);
-      if (fireNormX > 0) {
-        panServo.writeMicroseconds(PAN_STOP_US + trackSpeed);
-      } else {
-        panServo.writeMicroseconds(PAN_STOP_US - trackSpeed);
-      }
+      panServo.writeMicroseconds(fireNormX > 0 ? PAN_STOP_US + trackSpeed : PAN_STOP_US - trackSpeed);
     } else {
       panServo.writeMicroseconds(PAN_STOP_US);
     }
 
     if (abs(fireNormY) > TRACK_DEADZONE) {
-      tiltAngle += fireNormY * TRACK_TILT_GAIN * dt;
+      float tiltDelta = fireNormY * TRACK_TILT_GAIN * dt;
+      float maxDelta  = TILT_MAX_DEG_PER_S * dt;
+      tiltDelta = constrain(tiltDelta, -maxDelta, maxDelta);
+      tiltAngle += tiltDelta;
       tiltAngle = constrain(tiltAngle, TILT_MIN, TILT_MAX);
     }
-
   } else {
     panServo.writeMicroseconds(PAN_STOP_US);
   }
 
-  // Stabilization only when active
-  float finalAngle;
-  if (autoTrack && fireDetected) {
-    finalAngle = getStabilizedAngle(tiltAngle);
-  } else {
-    finalAngle = tiltAngle;
-  }
+  // Apply stabilization whenever autoTrack is on to avoid snap when fire briefly drops out
+  float finalAngle = autoTrack ? getStabilizedAngle(tiltAngle) : tiltAngle;
 
   int writeAngle = (int)finalAngle;
   if (writeAngle != lastWrittenTilt) {
@@ -369,12 +374,8 @@ void loop() {
     lastWrittenTilt = writeAngle;
   }
 
-  // ESC idle state
-  if (!shootCmd) {
-    writeBoth(armed ? LOCK_US : MIN_US);
-  }
+  writeBoth(armed ? LOCK_US : MIN_US);
 
-  // Debug - slower rate to reduce serial congestion
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 500) {
     lastPrint = millis();
