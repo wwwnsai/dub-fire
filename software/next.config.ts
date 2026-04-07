@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
         hostname: "googleusercontent.com",
       },
     ],
+    domains: ["kxlqevwmzpeekltblgbf.supabase.co"],
   },
   trailingSlash: false,
 };

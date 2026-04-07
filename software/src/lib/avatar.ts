@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 export async function uploadAvatar(userId: string, file: File) {
   const fileExt = file.name.split(".").pop();
   const fileName = `${userId}-${Date.now()}.${fileExt}`;
-  const filePath = `avatars/${fileName}`;
+  const filePath = `${fileName}`;
 
   // Upload
   const { error: uploadError } = await supabase.storage
@@ -19,9 +19,7 @@ export async function uploadAvatar(userId: string, file: File) {
   }
 
   // Get public URL
-  const { data } = supabase.storage
-    .from("avatars")
-    .getPublicUrl(filePath);
+  const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
   const publicUrl = data.publicUrl;
 
