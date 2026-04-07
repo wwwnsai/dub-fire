@@ -192,6 +192,7 @@ class FireDetectionApp:
             self.bridge.poll()
             self._update_fps()
             self.stream_store.update_sensor_snapshot(self._build_sensor_snapshot())
+            self.stream_store.update_fire_status(self._build_fire_status_snapshot(fire_status, thermal_info["max_temp"]))
 
             display_rgb = self._build_rgb_display(
                 rgb_frame,
@@ -282,6 +283,17 @@ class FireDetectionApp:
             }
         )
         return info
+
+    def _build_fire_status_snapshot(self, fire_status: dict, max_temp: float) -> dict:
+        with self.state_lock:
+            now = time.time()
+            condition = "fire" if fire_status["both_confirmed"] else "non-fire"
+            return {
+                "condition": condition,
+                "fire_confirmed": fire_status["fire_confirmed"],
+                "both_confirmed": fire_status["both_confirmed"],
+                "max_temp_c": max_temp,
+            }
 
     def _build_sensor_snapshot(self) -> dict:
         snapshot = self.bridge.snapshot_dict()

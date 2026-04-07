@@ -16,6 +16,7 @@ class StreamStore:
         self._rgb_frame = None
         self._thermal_frame = None
         self._sensor_snapshot = {}
+        self._fire_status = {}
         self._lock = threading.Lock()
         self._control_handler: Optional[Callable[[str], Optional[dict]]] = None
 
@@ -44,6 +45,14 @@ class StreamStore:
     def update_sensor_snapshot(self, snapshot: dict) -> None:
         with self._lock:
             self._sensor_snapshot = dict(snapshot)
+
+    def update_fire_status(self, status: dict) -> None:
+        with self._lock:
+            self._fire_status = dict(status)
+
+    def get_fire_status(self) -> dict:
+        with self._lock:
+            return dict(self._fire_status)
 
     def get_rgb_frame(self):
         with self._lock:
@@ -101,6 +110,10 @@ class StreamHandler(BaseHTTPRequestHandler):
             self._write_sensor_snapshot()
             return
 
+        if path == "/fire_status":
+            self._write_fire_status()
+            return
+
         self.send_error(404)
 
     def do_POST(self):
@@ -155,6 +168,16 @@ class StreamHandler(BaseHTTPRequestHandler):
                 "</body></html>"
             ).encode("utf-8")
         )
+
+    def _write_fire_status(self):
+        payload = json.dumps(self.server.store.get_fire_status()).encode("utf-8")
+        self.send_response(200)
+        self._write_cors_headers()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-cache, private")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def _write_sensor_snapshot(self):
         payload = json.dumps(self.server.store.get_sensor_snapshot()).encode("utf-8")

@@ -33,7 +33,7 @@ class Settings:
 
 def load_settings() -> Settings:
     return Settings(
-        rgb_cam=int(os.getenv("RGB_CAM", "0")),
+        rgb_cam=int(os.getenv("RGB_CAM", "10")),
         thermal_cam=os.getenv("THERMAL_CAM", "/dev/thermal"),
         enable_local_display=os.getenv("ENABLE_LOCAL_DISPLAY", "0") == "1",
         esp32_port=os.getenv("ESP32_PORT", "/dev/ttyUSB0"),
