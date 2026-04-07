@@ -5,7 +5,23 @@ import Card from "@/components/cards/Card";
 import StatusCard from "@/components/cards/StatusCard";
 import { useFireStatus } from "@/lib/fireStatusContext";
 import { useEffect, useState } from "react";
-import type { SensorSnapshot } from "@/lib/types";
+
+type PiSensor = {
+  temperature_c: number | null;
+  humidity: number | null;
+  imu_pitch: number | null;
+  imu_roll: number | null;
+  tof_distance_mm: number;
+  updated_at: string | null;
+  isArmed: boolean;
+  autoTrack: boolean;
+  autoShoot: boolean;
+  emergencyStop: boolean;
+  shotCount: number;
+  fireTempMin: number;
+  fps: number;
+  feederOn: boolean;
+};
 
 type PiFireStatus = {
   condition: "fire" | "non-fire" | null;
@@ -14,24 +30,21 @@ type PiFireStatus = {
   max_temp_c: number | null;
 };
 
-const EMPTY_SENSOR_STATUS: SensorSnapshot = {
-  temperatureC: null,
-  humidity: null,
-  imuPitch: null,
-  imuRoll: null,
-  updatedAt: null,
-  source: "uninitialized",
-};
+const fmt = (v: number | null | undefined, suffix = "") =>
+  typeof v === "number" ? `${v.toFixed(1)}${suffix}` : "--";
 
 export default function Home() {
   const { isSafe } = useFireStatus();
   const [loading, setLoading] = useState(false);
-  const [sensorStatus, setSensorStatus] = useState<SensorSnapshot>(EMPTY_SENSOR_STATUS);
-  const [piIsArmed, setPiIsArmed] = useState<boolean | null>(null);
-  const [piFireStatus, setPiFireStatus] = useState<PiFireStatus>({ condition: null, fire_confirmed: false, both_confirmed: false, max_temp_c: null });
+  const [sensor, setSensor] = useState<Partial<PiSensor>>({});
+  const [fireStatus, setFireStatus] = useState<PiFireStatus>({
+    condition: null,
+    fire_confirmed: false,
+    both_confirmed: false,
+    max_temp_c: null,
+  });
 
-  // Combined fire status: fire if Supabase OR Pi sensor says so
-  const fireDetected = !isSafe || piIsArmed === true;
+  const fireDetected = !isSafe || sensor.isArmed === true || fireStatus.both_confirmed;
 
   async function toggleFire() {
     setLoading(true);
@@ -51,72 +64,37 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadSensorStatus = async () => {
+    const loadSensor = async () => {
       try {
-        const response = await fetch("/api/sensor-status", { cache: "no-store" });
-        if (!response.ok) return;
-
-        const data: SensorSnapshot = await response.json();
-        if (!cancelled) {
-          setSensorStatus(data);
-        }
-      } catch (error) {
-        console.error("Failed to load sensor status", error);
-      }
-    };
-
-    const loadPiStatus = async () => {
-      try {
-        const response = await fetch("/api/ai/sensor", { cache: "no-store" });
-        if (!response.ok) return;
-
-        const data = await response.json();
-        if (!cancelled && typeof data.isArmed === "boolean") {
-          setPiIsArmed(data.isArmed);
-        }
-      } catch {
-        // Pi offline — keep last known value, fall back to Supabase isSafe
-      }
+        const res = await fetch("/api/ai/sensor", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setSensor(data);
+      } catch {}
     };
 
     const loadFireStatus = async () => {
       try {
-        const response = await fetch("/api/ai/fire_status", { cache: "no-store" });
-        if (!response.ok) return;
-        const data: PiFireStatus = await response.json();
-        if (!cancelled) setPiFireStatus(data);
-      } catch {
-        // Pi offline — leave last known state
-      }
+        const res = await fetch("/api/ai/fire_status", { cache: "no-store" });
+        if (!res.ok) return;
+        const data: PiFireStatus = await res.json();
+        if (!cancelled) setFireStatus(data);
+      } catch {}
     };
 
-    loadSensorStatus();
-    loadPiStatus();
+    loadSensor();
     loadFireStatus();
-    const intervalId = window.setInterval(() => {
-      loadSensorStatus();
-      loadPiStatus();
+    const id = window.setInterval(() => {
+      loadSensor();
       loadFireStatus();
     }, 1000);
 
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
+    return () => { cancelled = true; window.clearInterval(id); };
   }, []);
 
-  const formattedTemp =
-    sensorStatus.temperatureC !== null ? `${sensorStatus.temperatureC.toFixed(1)} °C` : "--";
-  const formattedHumidity =
-    sensorStatus.humidity !== null ? `${sensorStatus.humidity.toFixed(1)} %` : "--";
-  const formattedLastCheck = sensorStatus.updatedAt
-    ? new Date(sensorStatus.updatedAt).toLocaleTimeString()
+  const lastUpdate = sensor.updated_at
+    ? new Date(sensor.updated_at).toLocaleTimeString()
     : "--";
-  const sensorHealth =
-    sensorStatus.updatedAt &&
-    Date.now() - new Date(sensorStatus.updatedAt).getTime() < 10000
-      ? "Live"
-      : "Waiting";
 
   return (
     <Layout>
@@ -125,15 +103,28 @@ export default function Home() {
       <Card
         infoData={[
           { title: "Device", description: "ECC-806", editable: false },
+          { title: "FPS", description: String(sensor.fps ?? "--"), editable: false },
+          { title: "Shot Count", description: String(sensor.shotCount ?? "--"), editable: false },
+          { title: "Fire Threshold", description: fmt(sensor.fireTempMin, " °C"), editable: false },
         ]}
       />
 
       <Card
         infoData={[
-          { title: "Temperature", description: formattedTemp, editable: false },
-          { title: "Humidity", description: formattedHumidity, editable: false },
-          { title: "Last Update", description: formattedLastCheck, editable: false },
-          { title: "Sensor Health", description: sensorHealth, editable: false },
+          { title: "Temperature", description: fmt(sensor.temperature_c, " °C"), editable: false },
+          { title: "Humidity", description: fmt(sensor.humidity, " %"), editable: false },
+          { title: "Pitch / Roll", description: sensor.imu_pitch != null ? `${fmt(sensor.imu_pitch)}° / ${fmt(sensor.imu_roll)}°` : "--", editable: false },
+          { title: "Distance", description: sensor.tof_distance_mm != null && sensor.tof_distance_mm > 0 ? `${sensor.tof_distance_mm} mm` : "--", editable: false },
+          { title: "Last Update", description: lastUpdate, editable: false },
+        ]}
+      />
+
+      <Card
+        infoData={[
+          { title: "Condition", description: fireStatus.condition ?? "--", editable: false },
+          { title: "Max Temp", description: fmt(fireStatus.max_temp_c, " °C"), editable: false },
+          { title: "Thermal / RGB", description: fireStatus.fire_confirmed ? "Detected" : "Clear", editable: false },
+          { title: "Both Confirmed", description: fireStatus.both_confirmed ? "YES" : "No", editable: false },
         ]}
       />
 
