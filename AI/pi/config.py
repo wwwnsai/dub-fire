@@ -22,6 +22,9 @@ class Settings:
     thermal_y_offset: float
     pan_pos_scale: float
     pan_neg_scale: float
+    parallax_constant: float
+    y_bias: float
+    x_bias: float
     send_interval: float
     shoot_confirm_time: float
     shoot_cooldown: float
@@ -49,6 +52,9 @@ def load_settings() -> Settings:
         thermal_y_offset=float(os.getenv("THERMAL_Y_OFFSET", "0.30")),
         pan_pos_scale=float(os.getenv("PAN_POS_SCALE", "2.2")),   # boost when fire is right (norm_x > 0)
         pan_neg_scale=float(os.getenv("PAN_NEG_SCALE", "1.0")),   # boost when fire is left  (norm_x < 0)
+        parallax_constant=float(os.getenv("PARALLAX_CONSTANT", "270.0")),
+        y_bias=float(os.getenv("Y_BIAS", "0.0")),
+        x_bias=float(os.getenv("X_BIAS", "0.0")),
         send_interval=float(os.getenv("SEND_INTERVAL", "0.05")),
         shoot_confirm_time=float(os.getenv("SHOOT_CONFIRM_TIME", "2.0")),
         shoot_cooldown=float(os.getenv("SHOOT_COOLDOWN", "2.0")),

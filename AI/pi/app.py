@@ -541,16 +541,13 @@ class FireDetectionApp:
     _SMOOTH_ALPHA  = 0.50  # EMA factor — raise for faster response, lower for smoother
     _SEND_THRESH   = 0.02  # only send update if position changed more than this
 
-    # parallax calibration: camera is 80mm below barrel, 180mm behind tip
-    # at D=900mm measured offset=0.30 → constant = 0.30 * 900 = 270
-    _PARALLAX_CONSTANT = 270.0
     _PARALLAX_MIN_DIST = 150    # clamp to avoid huge offset at very close range
 
     def _parallax_y_offset(self) -> float:
         d = self.bridge.snapshot.tof_distance_mm
         if d <= 0:
             return self.settings.thermal_y_offset  # ToF unavailable — use static fallback
-        return self._PARALLAX_CONSTANT / max(d, self._PARALLAX_MIN_DIST)
+        return self.settings.parallax_constant / max(d, self._PARALLAX_MIN_DIST)
 
     def _send_tracking_command(self, fire_confirmed: bool, thermal_target: FireTarget | None) -> None:
         if self.state.manual_override_until > time.time():
@@ -559,8 +556,8 @@ class FireDetectionApp:
         if fire_confirmed and thermal_target is not None:
             raw_x = thermal_target.norm_x
             scale = self.settings.pan_pos_scale if raw_x >= 0 else self.settings.pan_neg_scale
-            adjusted_x = raw_x * scale
-            adjusted_y = thermal_target.norm_y - self._parallax_y_offset()
+            adjusted_x = raw_x * scale + self.settings.x_bias
+            adjusted_y = thermal_target.norm_y - self._parallax_y_offset() + self.settings.y_bias
             self.state._smooth_x += self._SMOOTH_ALPHA * (adjusted_x - self.state._smooth_x)
             self.state._smooth_y += self._SMOOTH_ALPHA * (adjusted_y - self.state._smooth_y)
 
@@ -591,13 +588,6 @@ class FireDetectionApp:
         display_rgb = rgb_frame.copy()
         if rgb_target:
             color = fire_status["color"]
-            cv2.rectangle(
-                display_rgb,
-                (rgb_target.x, rgb_target.y),
-                (rgb_target.x + rgb_target.w, rgb_target.y + rgb_target.h),
-                color,
-                2,
-            )
             cv2.circle(display_rgb, (rgb_target.cx, rgb_target.cy), 6, color, -1)
             cv2.line(display_rgb, (rgb_target.cx - 15, rgb_target.cy), (rgb_target.cx + 15, rgb_target.cy), color, 1)
             cv2.line(display_rgb, (rgb_target.cx, rgb_target.cy - 15), (rgb_target.cx, rgb_target.cy + 15), color, 1)
