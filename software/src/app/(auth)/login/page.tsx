@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -6,10 +7,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import googleLogo from "../../../photo/google-logo.png";
-import facebookLogo from "../../../photo/facebook-logo.png";
-import appleLogo from "../../../photo/apple-logo.png";
-
-import LayoutAuth from "../layout";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -110,7 +107,7 @@ export default function LoginPage() {
       </div>
       <div className="flex justify-center items-center mt-8 fixed left-0 right-0 bottom-16 z-30 mx-8">
         <p className="mt-auto text-text-secondary sen-regular text-sm">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <span
             className="text-secondary-light sen-semibold text-sm cursor-pointer hover:underline"
             onClick={() => router.push("/signup")}

@@ -173,7 +173,10 @@ export default function Page() {
 
           <ButtonCard
             title="Logout"
-            triggerFunc={() => supabase.auth.signOut()}
+            triggerFunc={() => {
+              supabase.auth.signOut()
+              router.replace("/login");
+            }}
             color="text-secondary-light"
           />
         </>
@@ -182,7 +185,7 @@ export default function Page() {
           <LineAddFriendButton />
           <ButtonCard
             title="Login"
-            triggerFunc={() => router.push("/login")}
+            triggerFunc={() => router.replace("/login")}
             color="text-secondary-light"
           />
         </>
