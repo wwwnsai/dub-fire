@@ -1,8 +1,8 @@
 {
   "temperatureC": -45,
   "humidity": 0,
-  "imuPitch": 4.3,
-  "imuRoll": -5.4,
-  "updatedAt": "2026-04-07T02:30:01",
+  "imuPitch": -2.2,
+  "imuRoll": -11.2,
+  "updatedAt": "2026-04-07T15:57:33",
   "source": "esp32-debug"
 }
